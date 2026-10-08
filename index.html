@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Neon Runner - Procedural 3D</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
+        canvas { display: block; }
+        #ui {
+            position: absolute; top: 20px; left: 20px; color: #0ff;
+            font-size: 24px; text-shadow: 0 0 10px #0ff; pointer-events: none;
+        }
+        #game-over {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #f0f; font-size: 48px; text-shadow: 0 0 20px #f0f;
+            display: none; text-align: center;
+        }
+        #game-over span { font-size: 20px; color: #fff; display: block; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div id="ui">СЧЕТ: <span id="score">0</span></div>
+    <div id="game-over">СИСТЕМНЫЙ СБОЙ<span>Нажми пробел или кликни для перезапуска</span></div>
+
+    <!-- Подключаем Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ==========================================
+        // 1. ГЕНЕРАЦИЯ ПРОЦЕДУРНЫХ ТЕКСТУР (Вместо GitHub)
+        // ==========================================
+        function generateCyberTexture(baseColor, lineColor) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            // Фон
+            ctx.fillStyle = baseColor;
+            ctx.fillRect(0, 0, 256, 256);
+
+            // Рисуем "схемы" и неоновые линии
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = lineColor;
+
+            for (let i = 0; i < 15; i++) {
+                ctx.beginPath();
+                let x = Math.random() * 256;
+                let y = Math.random() * 256;
+                ctx.moveTo(x, y);
+                for (let j = 0; j < 4; j++) {
+                    if (Math.random() > 0.5) x += (Math.random() - 0.5) * 100;
+                    else y += (Math.random() - 0.5) * 100;
+                    ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+
+            // Добавляем узлы (точки)
+            ctx.fillStyle = lineColor;
+            for (let i = 0; i < 20; i++) {
+                ctx.beginPath();
+                ctx.arc(Math.random() * 256, Math.random() * 256, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Превращаем Canvas в текстуру Three.js
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            return texture;
+        }
+
+        // ==========================================
+        // 2. НАСТРОЙКА СЦЕНЫ И ИГРЫ
+        // ==========================================
+        let scene, camera, renderer, player, obstacles = [];
+        let score = 0, gameSpeed = 0.3, isGameOver = false;
+        let moveLeft = false, moveRight = false;
+
+        function init() {
+            // Сцена и камера
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000011, 0.02);
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 3, 8);
+            camera.lookAt(0, 0, -10);
+
+            // Рендерер
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000011);
+            document.body.appendChild(renderer.domElement);
+
+            // Свет
+            const ambientLight = new THREE.AmbientLight(0x404040, 2);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+
+            // Пол (бесконечная сетка)
+            const floorGeo = new THREE.PlaneGeometry(100, 200, 50, 100);
+            const floorMat = new THREE.MeshBasicMaterial({ 
+                color: 0x000000, 
+                wireframe: true, 
+                transparent: true, 
+                opacity: 0.3 
+            });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.z = -50;
+            scene.add(floor);
+
+            // Игрок (с процедурной текстурой)
+            const playerTex = generateCyberTexture('#111122', '#00ffff');
+            const playerMat = new THREE.MeshStandardMaterial({ 
+                map: playerTex, 
+                emissive: '#00ffff', 
+                emissiveIntensity: 0.5,
+                metalness: 0.8, 
+                roughness: 0.2 
+            });
+            player = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), playerMat);
+            player.position.y = 0.75;
+            scene.add(player);
+
+            // Управление
+            window.addEventListener('keydown', onKeyPress);
+            window.addEventListener('keyup', onKeyRelease);
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('click', restartGame);
+
+            animate();
+        }
+
+        function spawnObstacle() {
+            // Генерируем случайную текстуру для препятствия
+            const colors = [
+                { base: '#220011', line: '#ff00ff' },
+                { base: '#112200', line: '#00ff00' },
+                { base: '#221100', line: '#ffaa00' }
+            ];
+            const rndColor = colors[Math.floor(Math.random() * colors.length)];
+            const obsTex = generateCyberTexture(rndColor.base, rndColor.line);
+            
+            const obsMat = new THREE.MeshStandardMaterial({ 
+                map: obsTex, 
+                emissive: rndColor.line, 
+                emissiveIntensity: 0.4 
+            });
+            
+            const size = 1 + Math.random() * 1.5;
+            const obs = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), obsMat);
+            
+            // Спавн впереди на одной из 3 полос
+            const lanes = [-3, 0, 3];
+            obs.position.x = lanes[Math.floor(Math.random() * 3)];
+            obs.position.y = size / 2;
+            obs.position.z = -100 - Math.random() * 50;
+            
+            obs.userData = { size: size };
+            scene.add(obs);
+            obstacles.push(obs);
+        }
+
+        // ==========================================
+        // 3. ИГРОВОЙ ЦИКЛ
+        // ==========================================
+        let lastSpawn = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            if (isGameOver) {
+                renderer.render(scene, camera);
+                return;
+            }
+
+            // Движение игрока
+            if (moveLeft && player.position.x > -4) player.position.x -= 0.2;
+            if (moveRight && player.position.x < 4) player.position.x += 0.2;
+            
+            // Легкое покачивание для "жизни"
+            player.rotation.y += 0.02;
+            player.rotation.z = Math.sin(Date.now() * 0.005) * 0.1;
+
+            // Движение и спавн препятствий
+            const time = Date.now();
+            if (time - lastSpawn > 1000 / gameSpeed) {
+                spawnObstacle();
+                lastSpawn = time;
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.position.z += gameSpeed;
+                obs.rotation.x += 0.01;
+                obs.rotation.y += 0.01;
+
+                // Проверка столкновения (упрощенная)
+                const dist = player.position.distanceTo(obs.position);
+                if (dist < (1 + obs.userData.size) * 0.6) {
+                    gameOver();
+                }
+
+                // Удаление улетевших препятствий
+                if (obs.position.z > 10) {
+                    scene.remove(obs);
+                    obstacles.splice(i, 1);
+                    score += 10;
+                    document.getElementById('score').innerText = score;
+                    
+                    // Увеличиваем сложность
+                    if (score % 100 === 0) gameSpeed += 0.05;
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // ==========================================
+        // 4. УПРАВЛЕНИЕ И СОБЫТИЯ
+        // ==========================================
+        function onKeyPress(e) {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') moveLeft = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') moveRight = true;
+            if (e.code === 'Space' && isGameOver) restartGame();
+        }
+        function onKeyRelease(e) {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') moveLeft = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') moveRight = false;
+        }
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        function gameOver() {
+            isGameOver = true;
+            document.getElementById('game-over').style.display = 'block';
+        }
+        function restartGame() {
+            if (!isGameOver) return;
+            // Очистка препятствий
+            obstacles.forEach(o => scene.remove(o));
+            obstacles = [];
+            
+            score = 0;
+            gameSpeed = 0.3;
+            player.position.x = 0;
+            document.getElementById('score').innerText = score;
+            document.getElementById('game-over').style.display = 'none';
+            isGameOver = false;
+        }
+
+        // Старт!
+        init();
+    </script>
+</body>
+  </html>
