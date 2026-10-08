@@ -36,7 +36,7 @@ canvas{display:block;width:100vw;height:100vh}
 #menu button,#end-menu button{background:#ffcc00;color:#000;border:none;padding:15px 40px;font-size:20px;font-weight:bold;margin-top:20px;border-radius:8px;cursor:pointer}
 #shop-menu{justify-content:flex-start;padding-top:20px;padding-bottom:80px}
 #shop-menu h2{font-size:24px;margin:0 0 15px;color:#ffcc00;position:sticky;top:0;background:rgba(0,0,0,0.95);padding:10px;z-index:101;width:100%}
-#shop-items{width:100%;max-width:500px;overflow-y:auto;flex:1;padding-bottom:20px}
+#shop-items{width:100%;max-width:500px;overflow-y:auto;flex:1;padding-bottom:20px;touch-action:pan-y;-webkit-overflow-scrolling:touch}
 .shop-item{background:rgba(255,204,0,0.1);border:2px solid #ffcc00;padding:10px;margin:6px 0;width:100%;display:flex;justify-content:space-between;align-items:center;border-radius:8px}
 .shop-item-info{text-align:left;flex:1}
 .shop-item-name{font-size:15px;font-weight:bold;color:#fff}
@@ -69,6 +69,7 @@ canvas{display:block;width:100vw;height:100vh}
 HP: <span id="hp">100</span>
 <div id="hp-bar"><div id="hp-fill" style="width:100%"></div></div>
 <div style="margin-top:5px">💰 <span id="money">800</span></div>
+<div style="margin-top:3px;font-size:12px">🛡️ <span id="armor">0</span>%</div>
 </div>
 <div id="hud-right">
 <div id="weapon-name">GLOCK</div>
@@ -109,7 +110,7 @@ var isMobile=/Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.user
 if(isMobile){
 document.getElementById('controls-info').innerHTML='ЛЕВАЯ часть: джойстик<br>ПРАВАЯ часть: обзор<br>Кнопки: ОГОНЬ, R, 🛒, ⛶';
 }else{
-document.getElementById('controls-info').innerHTML='WASD — движение | МЫШЬ — обзор<br>ЛКМ — огонь | R — перезарядка | B — магазин<br>Кликни по экрану для захвата мыши';
+document.getElementById('controls-info').innerHTML='WASD — движение | МЫШЬ — обзор<br>ЛКМ — огонь | R — перезарядка | B — магазин | F — полный экран<br>Кликни по экрану для захвата мыши';
 }
 
 var scene=new THREE.Scene();
@@ -248,6 +249,7 @@ pos:new THREE.Vector3(CT_SPAWN.x,1.7,CT_SPAWN.z),
 vel:new THREE.Vector3(),
 yaw:0,pitch:0,
 hp:100,maxHp:100,
+armor:0,
 money:800,score:0,kills:0,
 currentWeapon:'glock',
 weapons:{glock:{name:'GLOCK-18',damage:22,fireRate:150,ammo:20,maxAmmo:20,reserve:60,reloadTime:1800,spread:0.02,type:'pistol'}},
@@ -338,6 +340,7 @@ var z=spawn.z+(Math.random()-0.5)*10;
 g.position.set(x,0,z);
 g.userData={
 hp:100,
+armor:50,
 team:team,
 name:name,
 alive:true,
@@ -349,7 +352,9 @@ stateTimer:0,
 strafeDir:Math.random()>0.5?1:-1,
 weapon:team==='CT'?'m4a4':'ak47',
 isAdvanced:isAdvanced,
-accuracy:isAdvanced?0.25:0.15
+accuracy:isAdvanced?0.25:0.15,
+stuckCounter:0,
+lastPos:new THREE.Vector3(x,0,z)
 };
 scene.add(g);
 allBots.push(g);
@@ -553,8 +558,8 @@ healItem.innerHTML='<div class="shop-item-info"><div class="shop-item-name">АП
 shopItems.appendChild(healItem);
 var armorItem=document.createElement('div');
 armorItem.className='shop-item';
-var armorDis=(player.money<600||player.maxHp>=150)?'disabled':'';
-armorItem.innerHTML='<div class="shop-item-info"><div class="shop-item-name">БРОНЕЖИЛЕТ</div><div class="shop-item-desc">Макс. HP: 100 → 150</div></div><button '+armorDis+' data-action="armor">600💰</button>';
+var armorDis=(player.money<600||player.armor>=50)?'disabled':'';
+armorItem.innerHTML='<div class="shop-item-info"><div class="shop-item-name">БРОНЕЖИЛЕТ</div><div class="shop-item-desc">Снижает урон на 50%</div></div><button '+armorDis+' data-action="armor">600💰</button>';
 shopItems.appendChild(armorItem);
 var btns=shopItems.querySelectorAll('button');
 for(var j=0;j<btns.length;j++){
@@ -617,10 +622,9 @@ playBuy();updateHUD();openShop();
 }
 }
 function buyArmor(){
-if(player.money>=600&&player.maxHp<150){
+if(player.money>=600&&player.armor<50){
 player.money-=600;
-player.maxHp=150;
-player.hp=Math.min(player.hp+50,player.maxHp);
+player.armor=50;
 playBuy();updateHUD();openShop();
 }
 }
@@ -790,6 +794,7 @@ var canSee=hasLineOfSight(eyePos,targetEye)&&dist<35;
 if(canSee){
 bot.userData.state='combat';
 bot.userData.stateTimer=0;
+bot.userData.stuckCounter=0;
 }else{
 bot.userData.stateTimer+=dt;
 if(bot.userData.stateTimer>2){
@@ -797,6 +802,23 @@ bot.userData.state='advance';
 bot.userData.stateTimer=0;
 }
 }
+// Проверка застревания
+var moved=bot.position.distanceTo(bot.userData.lastPos);
+if(moved<0.1*dt){
+bot.userData.stuckCounter++;
+if(bot.userData.stuckCounter>30){
+// Застрял - случайное направление
+var angle=Math.random()*Math.PI*2;
+bot.position.x+=Math.cos(angle)*bot.userData.speed*dt*2;
+bot.position.z+=Math.sin(angle)*bot.userData.speed*dt*2;
+collideWalls(bot.position);
+bot.userData.stuckCounter=0;
+}
+}else{
+bot.userData.stuckCounter=0;
+}
+bot.userData.lastPos.copy(bot.position);
+
 if(bot.userData.state==='combat'){
 bot.rotation.y=Math.atan2(toTarget.x,toTarget.z);
 if(bot.userData.isAdvanced&&dist<15&&Math.random()<0.3){
@@ -818,6 +840,10 @@ if(Math.random()<hitChance){
 var dmg=weaponsData[bot.userData.weapon].damage*0.4;
 if(target===player){
 if(player.alive){
+// Броня снижает урон
+if(player.armor>0){
+dmg*=(1-player.armor/100);
+}
 player.hp-=dmg;
 playHit();
 if(player.hp<=0){
@@ -828,6 +854,10 @@ addKillFeed(bot.userData.name,'ТЫ',false);
 updateHUD();
 }
 }else if(target.userData.alive){
+// Броня бота снижает урон
+if(target.userData.armor>0){
+dmg*=(1-target.userData.armor/100);
+}
 target.userData.hp-=dmg;
 if(target.userData.hp<=0){
 killBot(target,bot);
@@ -1002,6 +1032,7 @@ function updateHUD(){
 document.getElementById('hp').textContent=Math.max(0,Math.floor(player.hp));
 document.getElementById('hp-fill').style.width=(player.hp/player.maxHp*100)+'%';
 document.getElementById('hp-fill').style.background=player.hp>player.maxHp*0.5?'#0f0':player.hp>player.maxHp*0.25?'#ff0':'#f00';
+document.getElementById('armor').textContent=player.armor;
 document.getElementById('money').textContent=player.money;
 var wp=player.weapons[player.currentWeapon];
 document.getElementById('ammo').textContent=wp.ammo;
@@ -1056,7 +1087,7 @@ initAudio();
 document.getElementById('menu').classList.remove('active');
 roundNum=1;ctScore=0;tScore=0;gameOver=false;
 player.money=800;player.score=0;player.kills=0;
-player.maxHp=100;
+player.maxHp=100;player.armor=0;
 player.currentWeapon='glock';
 player.weapons={glock:{name:'GLOCK-18',damage:22,fireRate:150,ammo:20,maxAmmo:20,reserve:60,reloadTime:1800,spread:0.02,type:'pistol'}};
 switchWeapon();
