@@ -3,174 +3,316 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mini Strike Pro</title>
+<title>Mini Strike - Inferno</title>
 <style>
-*{box-sizing:border-box;touch-action:none;-webkit-user-select:none;user-select:none}
-body{margin:0;overflow:hidden;background:#000;font-family:'Courier New',monospace}
+*{box-sizing:border-box;touch-action:none;-webkit-user-select:none;user-select:none;margin:0;padding:0}
+body{overflow:hidden;background:#000;font-family:'Courier New',monospace;color:#ffcc00}
 canvas{display:block;width:100vw;height:100vh}
-#hud{position:absolute;top:10px;left:10px;right:10px;color:#ffcc00;font-size:16px;text-shadow:1px 1px 0 #000;display:flex;justify-content:space-between;pointer-events:none;z-index:10}
-#hp-bar{width:100px;height:10px;background:#300;border:2px solid #ffcc00;margin-top:3px}
+#hud{position:absolute;top:10px;left:10px;right:10px;font-size:14px;text-shadow:1px 1px 0 #000;display:flex;justify-content:space-between;pointer-events:none;z-index:10}
+#hud-left,#hud-right{background:rgba(0,0,0,0.5);padding:8px;border-radius:5px;border:1px solid #ffcc00}
+#hp-bar{width:120px;height:10px;background:#300;border:1px solid #ffcc00;margin-top:3px}
 #hp-fill{height:100%;background:#0f0;transition:width 0.2s}
+#round-info{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);padding:8px 20px;border:2px solid #ffcc00;border-radius:5px;font-size:16px;text-align:center;z-index:10;pointer-events:none}
+#team-score{display:flex;gap:20px;margin-top:5px}
+.ct-score{color:#5af}
+.t-score{color:#f55}
 #crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;pointer-events:none;z-index:5}
-#crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(0,255,0,0.8)}
+#crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(0,255,0,0.9)}
 #crosshair::before{left:9px;top:0;width:2px;height:20px}
 #crosshair::after{top:9px;left:0;height:2px;width:20px}
 #joystick-zone{position:absolute;bottom:20px;left:20px;width:130px;height:130px;border:2px solid rgba(255,255,255,0.3);border-radius:50%;pointer-events:auto;z-index:20}
 #joystick-knob{position:absolute;top:50%;left:50%;width:50px;height:50px;background:rgba(255,204,0,0.5);border-radius:50%;transform:translate(-50%,-50%);pointer-events:none}
 .action-btn{position:absolute;border-radius:50%;border:3px solid rgba(255,255,255,0.5);color:#fff;font-weight:bold;display:flex;align-items:center;justify-content:center;pointer-events:auto;z-index:20;font-family:inherit}
 #fire-btn{bottom:30px;right:20px;width:80px;height:80px;background:rgba(255,50,50,0.4);font-size:14px}
-#fire-btn:active{background:rgba(255,50,50,0.8)}
 #reload-btn{bottom:130px;right:30px;width:55px;height:55px;background:rgba(50,150,255,0.4);font-size:12px}
 #shop-btn{bottom:200px;right:40px;width:50px;height:50px;background:rgba(255,200,0,0.4);font-size:12px}
-#menu,#shop-menu,#end-menu{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);color:#ffcc00;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;font-size:14px;padding:15px}
+#weapon-name{position:absolute;bottom:120px;right:110px;color:#fff;font-size:14px;text-shadow:1px 1px 0 #000;pointer-events:none;z-index:10}
+#menu,#shop-menu,#end-menu,#round-end{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);color:#ffcc00;text-align:center;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;font-size:14px;padding:15px;overflow-y:auto}
+#menu.active,#shop-menu.active,#end-menu.active,#round-end.active{display:flex}
 #menu h1,#end-menu h1{font-size:32px;margin:0 0 15px;color:#ff3300}
 #menu button,#end-menu button{background:#ffcc00;color:#000;border:none;padding:15px 40px;font-size:20px;font-weight:bold;margin-top:20px;border-radius:8px;cursor:pointer}
-#menu button:active,#end-menu button:active{background:#fff}
-#shop-menu{justify-content:flex-start;padding-top:40px;overflow-y:auto}
-#shop-menu h2{font-size:28px;margin:0 0 20px;color:#ffcc00}
-.shop-item{background:rgba(255,204,0,0.1);border:2px solid #ffcc00;padding:15px;margin:10px 0;width:90%;max-width:400px;display:flex;justify-content:space-between;align-items:center;border-radius:8px}
+#shop-menu{justify-content:flex-start;padding-top:30px}
+#shop-menu h2{font-size:24px;margin:0 0 15px;color:#ffcc00}
+.shop-item{background:rgba(255,204,0,0.1);border:2px solid #ffcc00;padding:10px;margin:6px 0;width:95%;max-width:450px;display:flex;justify-content:space-between;align-items:center;border-radius:8px}
 .shop-item-info{text-align:left;flex:1}
-.shop-item-name{font-size:18px;font-weight:bold;color:#fff}
-.shop-item-desc{font-size:12px;color:#aaa;margin-top:5px}
-.shop-item button{background:#0f0;color:#000;border:none;padding:10px 20px;font-size:14px;font-weight:bold;border-radius:5px;cursor:pointer}
+.shop-item-name{font-size:15px;font-weight:bold;color:#fff}
+.shop-item-desc{font-size:11px;color:#aaa;margin-top:3px}
+.shop-item button{background:#0f0;color:#000;border:none;padding:8px 15px;font-size:13px;font-weight:bold;border-radius:5px;cursor:pointer}
 .shop-item button:disabled{background:#555;color:#888}
-#close-shop{background:#f00;color:#fff;border:none;padding:12px 30px;font-size:16px;margin-top:20px;border-radius:8px;cursor:pointer}
-.hidden{display:none!important}
+.shop-item button.owned{background:#888}
+#close-shop{background:#f00;color:#fff;border:none;padding:12px 30px;font-size:16px;margin-top:15px;border-radius:8px;cursor:pointer}
 #hit-marker{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#f00;font-size:50px;font-weight:bold;opacity:0;pointer-events:none;z-index:15}
-#weapon-name{position:absolute;bottom:120px;right:100px;color:#fff;font-size:14px;text-shadow:1px 1px 0 #000;pointer-events:none;z-index:10}
-#timer{position:absolute;top:50px;left:50%;transform:translateX(-50%);color:#fff;font-size:20px;text-shadow:1px 1px 0 #000;pointer-events:none;z-index:10}
+#kill-feed{position:absolute;top:60px;right:10px;color:#fff;font-size:13px;text-shadow:1px 1px 0 #000;pointer-events:none;z-index:10;text-align:right}
+.kill-msg{background:rgba(0,0,0,0.6);padding:3px 8px;margin:2px 0;border-radius:3px;animation:fadeOut 3s forwards}
+@keyframes fadeOut{0%{opacity:1}70%{opacity:1}100%{opacity:0}}
+#round-msg{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-size:48px;font-weight:bold;text-shadow:3px 3px 0 #000;pointer-events:none;z-index:50;opacity:0;transition:opacity 0.3s}
+.hidden{display:none!important}
 </style>
 </head>
 <body>
 <div id="crosshair"></div>
 <div id="hit-marker">✕</div>
-<div id="timer">2:00</div>
+<div id="round-msg"></div>
+<div id="round-info">
+РАУНД <span id="round-num">1</span> | <span id="round-timer">1:45</span>
+<div id="team-score">
+<span class="ct-score">CT: <span id="ct-score">0</span></span>
+<span class="t-score">T: <span id="t-score">0</span></span>
+</div>
+</div>
 <div id="hud">
-<div>
+<div id="hud-left">
 HP: <span id="hp">100</span>
 <div id="hp-bar"><div id="hp-fill" style="width:100%"></div></div>
-<div style="margin-top:5px">💰 <span id="money">0</span></div>
+<div style="margin-top:5px">💰 <span id="money">800</span></div>
 </div>
-<div style="text-align:right">
-<span id="ammo">12</span> / <span id="reserve">36</span><br>
-СЧЕТ: <span id="score">0</span><br>
-УБИЙСТВ: <span id="kills">0</span>
+<div id="hud-right">
+<div id="weapon-name">GLOCK</div>
+<span id="ammo">20</span> / <span id="reserve">60</span><br>
+СЧЕТ: <span id="score">0</span> | УБИЙСТВ: <span id="kills">0</span>
 </div>
 </div>
-<div id="weapon-name">ПИСТОЛЕТ</div>
+<div id="kill-feed"></div>
 <div id="joystick-zone"><div id="joystick-knob"></div></div>
 <button id="fire-btn" class="action-btn">ОГОНЬ</button>
 <button id="reload-btn" class="action-btn">R</button>
 <button id="shop-btn" class="action-btn">🛒</button>
-<div id="menu">
-<h1>MINI STRIKE PRO</h1>
+<div id="menu" class="active">
+<h1>MINI STRIKE: INFERNO</h1>
 <div id="controls-info"></div>
+<div style="margin:15px 0;font-size:13px;color:#aaa">Командный бой 5 на 5. Побеждай раунды, покупай оружие!</div>
 <button id="startBtn">НАЧАТЬ ИГРУ</button>
 </div>
-<div id="shop-menu" class="hidden">
-<h2>МАГАЗИН</h2>
+<div id="shop-menu">
+<h2>МАГАЗИН ОРУЖИЯ</h2>
 <div id="shop-items"></div>
 <button id="close-shop">ЗАКРЫТЬ</button>
 </div>
-<div id="end-menu" class="hidden">
-<h1 id="end-title">МИССИЯ ЗАВЕРШЕНА</h1>
+<div id="round-end">
+<h1 id="round-end-title">РАУНД ОКОНЧЕН</h1>
+<div id="round-end-stats"></div>
+<button id="next-round-btn">СЛЕДУЮЩИЙ РАУНД</button>
+</div>
+<div id="end-menu">
+<h1 id="end-title">ИГРА ОКОНЧЕНА</h1>
 <div id="end-stats"></div>
 <button id="restartBtn">ИГРАТЬ СНОВА</button>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-var isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent) || ('ontouchstart' in window);
+var isMobile=/Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent)||('ontouchstart' in window);
 if(isMobile){
-document.getElementById('controls-info').innerHTML='ЛЕВАЯ часть: джойстик движения<br>ПРАВАЯ часть: обзор камерой<br>Кнопки: стрельба, перезарядка, магазин';
+document.getElementById('controls-info').innerHTML='ЛЕВАЯ часть: джойстик<br>ПРАВАЯ часть: обзор<br>Кнопки: ОГОНЬ, R, 🛒';
 }else{
-document.getElementById('controls-info').innerHTML='WASD — движение<br>МЫШЬ — обзор<br>ЛКМ — огонь | R — перезарядка | B — магазин<br>Кликни по экрану для захвата мыши';
+document.getElementById('controls-info').innerHTML='WASD — движение | МЫШЬ — обзор<br>ЛКМ — огонь | R — перезарядка | B — магазин<br>Кликни по экрану для захвата мыши';
 }
+
+// ============ СЦЕНА ============
 var scene=new THREE.Scene();
-scene.background=new THREE.Color(0x87ceeb);
-scene.fog=new THREE.Fog(0x87ceeb,20,90);
+scene.background=new THREE.Color(0xd4a574);
+scene.fog=new THREE.Fog(0xd4a574,30,120);
 var camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,500);
 var renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-performance"});
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;
 document.body.appendChild(renderer.domElement);
-scene.add(new THREE.AmbientLight(0xffffff,0.6));
-var sun=new THREE.DirectionalLight(0xffffff,0.8);
-sun.position.set(30,60,30);
+scene.add(new THREE.AmbientLight(0xffddaa,0.6));
+var sun=new THREE.DirectionalLight(0xffeecc,0.9);
+sun.position.set(40,80,30);
 sun.castShadow=true;
-sun.shadow.mapSize.set(1024,1024);
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-70;sun.shadow.camera.right=70;
+sun.shadow.camera.top=70;sun.shadow.camera.bottom=-70;
 scene.add(sun);
-function makeTexture(base,line){
+
+// ============ ТЕКСТУРЫ INFERNO ============
+function makeTexture(base,line,size){
+if(!size)size=128;
 var c=document.createElement('canvas');
-c.width=c.height=128;
+c.width=c.height=size;
 var ctx=c.getContext('2d');
-ctx.fillStyle=base;ctx.fillRect(0,0,128,128);
-ctx.strokeStyle=line;ctx.lineWidth=2;
-for(var i=0;i<=128;i+=32){
-ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,128);ctx.stroke();
-ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(128,i);ctx.stroke();
+ctx.fillStyle=base;ctx.fillRect(0,0,size,size);
+// Шум/кирпичи
+ctx.fillStyle=line;
+for(var i=0;i<size;i+=16){
+for(var j=0;j<size;j+=8){
+var off=(j/8)%2===0?0:8;
+ctx.fillRect(i+off,j,14,6);
+}
+}
+// Трещины
+ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1;
+for(var k=0;k<3;k++){
+ctx.beginPath();
+var x=Math.random()*size,y=Math.random()*size;
+ctx.moveTo(x,y);
+for(var l=0;l<3;l++){
+x+=(Math.random()-0.5)*30;
+y+=(Math.random()-0.5)*30;
+ctx.lineTo(x,y);
+}
+ctx.stroke();
 }
 var t=new THREE.CanvasTexture(c);
 t.wrapS=t.wrapT=THREE.RepeatWrapping;
 return t;
 }
+var sandTex=makeTexture('#c9a57a','#8b6f47');
+var darkWoodTex=makeTexture('#6b4423','#3d2410');
+var roofTex=makeTexture('#8b3a1f','#5a2410');
+var stoneTex=makeTexture('#8a8070','#5a5040');
+var groundTex=makeTexture('#b89968','#7a6540');
+groundTex.repeat.set(30,30);
+
+// ============ КАРТА INFERNO ============
 var floorMesh=new THREE.Mesh(
-new THREE.PlaneGeometry(120,120),
-new THREE.MeshStandardMaterial({map:makeTexture('#6b5d4a','#4a3f30')})
+new THREE.PlaneGeometry(140,140),
+new THREE.MeshStandardMaterial({map:groundTex})
 );
 floorMesh.rotation.x=-Math.PI/2;
 floorMesh.receiveShadow=true;
 scene.add(floorMesh);
+
 var walls=[];
-function addWall(x,z,w,h,d,color){
-if(!color)color='#8b7355';
-var m=new THREE.Mesh(
-new THREE.BoxGeometry(w,h,d),
-new THREE.MeshStandardMaterial({map:makeTexture(color,'#3a2f20')})
-);
+var wallMaterials={
+sand:new THREE.MeshStandardMaterial({map:sandTex}),
+wood:new THREE.MeshStandardMaterial({map:darkWoodTex}),
+roof:new THREE.MeshStandardMaterial({map:roofTex}),
+stone:new THREE.MeshStandardMaterial({map:stoneTex})
+};
+function addWall(x,z,w,h,d,matKey,rotY){
+if(!rotY)rotY=0;
+var geo=new THREE.BoxGeometry(w,h,d);
+var m=new THREE.Mesh(geo,wallMaterials[matKey]||wallMaterials.sand);
 m.position.set(x,h/2,z);
+m.rotation.y=rotY;
 m.castShadow=true;m.receiveShadow=true;
-m.userData={w:w,h:h,d:d};
+m.userData={w:w,h:h,d:d,rotY:rotY};
 scene.add(m);
 walls.push(m);
+return m;
 }
-addWall(0,-40,80,5,1);addWall(0,40,80,5,1);
-addWall(-40,0,1,5,80);addWall(40,0,1,5,80);
-addWall(-15,-10,5,2.5,2);addWall(12,-15,3,2,6);
-addWall(-8,15,6,2,2);addWall(18,10,3,3,3);
-addWall(0,0,4,2,4);addWall(-25,20,4,2.5,4);
+// Внешние стены карты
+addWall(0,-60,120,6,1,'stone');
+addWall(0,60,120,6,1,'stone');
+addWall(-60,0,1,6,120,'stone');
+addWall(60,0,1,6,120,'stone');
+
+// A-сайт (верх карты) - квартиры
+addWall(-30,-40,15,5,1,'sand');
+addWall(-30,-30,15,5,1,'sand');
+addWall(-37.5,-35,1,5,10,'sand');
+addWall(-22.5,-35,1,5,10,'sand');
+// Крыша квартир
+addWall(-30,-35,16,0.5,11,'roof');
+// Ящики на A
+addWall(-25,-38,2,2,2,'wood');
+addWall(-28,-32,2,2,2,'wood');
+
+// B-сайт (низ карты) - банан
+addWall(30,40,12,5,1,'sand');
+addWall(30,30,12,5,1,'sand');
+addWall(36,35,1,5,10,'sand');
+addWall(24,35,1,5,10,'sand');
+// Ящики на B
+addWall(28,38,2,2,2,'wood');
+addWall(32,32,2,2,2,'wood');
+addWall(26,34,2,2,2,'wood');
+
+// Мид (центр)
+addWall(-10,-10,1,4,20,'sand');
+addWall(10,-10,1,4,20,'sand');
+// Арка мида
+addWall(0,-20,20,4,1,'stone');
+addWall(0,0,20,4,1,'stone');
+
+// Боковые проходы
+addWall(-40,-15,1,4,15,'sand');
+addWall(-25,-15,1,4,15,'sand');
+addWall(40,15,1,4,15,'sand');
+addWall(25,15,1,4,15,'sand');
+
+// Разбросанные укрытия
+addWall(-15,20,3,2,3,'wood');
+addWall(15,-20,3,2,3,'wood');
+addWall(0,30,4,2,2,'wood');
+addWall(0,-30,4,2,2,'wood');
+addWall(-45,25,3,2,3,'wood');
+addWall(45,-25,3,2,3,'wood');
+addWall(-20,45,4,2,2,'wood');
+addWall(20,-45,4,2,2,'wood');
+
+// Точки спавна
+var CT_SPAWN={x:0,z:-50};
+var T_SPAWN={x:0,z:50};
+
+// ============ ОРУЖИЯ (10 штук) ============
 var weaponsData={
-pistol:{name:'ПИСТОЛЕТ',damage:25,fireRate:300,maxAmmo:12,reserve:36,reloadTime:1200,price:0},
-rifle:{name:'АВТОМАТ',damage:35,fireRate:120,maxAmmo:30,reserve:90,reloadTime:2000,price:800},
-shotgun:{name:'ДРОБОВИК',damage:80,fireRate:800,maxAmmo:6,reserve:24,reloadTime:2500,price:1200}
+glock:{name:'GLOCK-18',damage:22,fireRate:150,maxAmmo:20,reserve:60,reloadTime:1800,price:0,spread:0.02,type:'pistol'},
+usp:{name:'USP-S',damage:30,fireRate:200,maxAmmo:12,reserve:36,reloadTime:1900,price:500,spread:0.01,type:'pistol'},
+p250:{name:'P250',damage:35,fireRate:180,maxAmmo:13,reserve:39,reloadTime:1800,price:600,spread:0.015,type:'pistol'},
+deagle:{name:'DESERT EAGLE',damage:85,fireRate:400,maxAmmo:7,reserve:21,reloadTime:2200,price:1200,spread:0.025,type:'pistol'},
+mp5:{name:'MP5',damage:25,fireRate:90,maxAmmo:30,reserve:90,reloadTime:2200,price:1500,spread:0.025,type:'smg'},
+p90:{name:'P90',damage:22,fireRate:70,maxAmmo:50,reserve:150,reloadTime:2800,price:2000,spread:0.03,type:'smg'},
+nova:{name:'NOVA',damage:120,fireRate:900,maxAmmo:8,reserve:24,reloadTime:3500,price:1800,spread:0.08,type:'shotgun'},
+ak47:{name:'AK-47',damage:45,fireRate:100,maxAmmo:30,reserve:90,reloadTime:2500,price:2700,spread:0.02,type:'rifle'},
+m4a4:{name:'M4A4',damage:38,fireRate:90,maxAmmo:30,reserve:90,reloadTime:2400,price:2900,spread:0.015,type:'rifle'},
+awp:{name:'AWP',damage:200,fireRate:1500,maxAmmo:5,reserve:20,reloadTime:3500,price:4750,spread:0.002,type:'sniper'}
 };
+
+// ============ ИГРОК ============
 var player={
-pos:new THREE.Vector3(0,1.7,25),
+pos:new THREE.Vector3(CT_SPAWN.x,1.7,CT_SPAWN.z),
 vel:new THREE.Vector3(),
 yaw:0,pitch:0,
 hp:100,maxHp:100,
-money:0,score:0,kills:0,
-currentWeapon:'pistol',
-weapons:{pistol:{name:'ПИСТОЛЕТ',damage:25,fireRate:300,ammo:12,maxAmmo:12,reserve:36,reloadTime:1200},rifle:null,shotgun:null},
-reloading:false,onGround:true
+money:800,score:0,kills:0,
+currentWeapon:'glock',
+weapons:{glock:{name:'GLOCK-18',damage:22,fireRate:150,ammo:20,maxAmmo:20,reserve:60,reloadTime:1800,spread:0.02,type:'pistol'}},
+reloading:false,onGround:true,
+alive:true,team:'CT',name:'ТЫ'
 };
 camera.position.copy(player.pos);
+
+// ============ МОДЕЛИ ОРУЖИЯ ============
 var gun;
 function createGunModel(type){
 var g=new THREE.Group();
+var mat=new THREE.MeshStandardMaterial({color:0x222222,metalness:0.8,roughness:0.3});
+var mat2=new THREE.MeshStandardMaterial({color:0x111111,metalness:0.9});
+var woodMat=new THREE.MeshStandardMaterial({color:0x442200,metalness:0.3});
 if(type==='pistol'){
-g.add(new THREE.Mesh(new THREE.BoxGeometry(0.08,0.12,0.4),new THREE.MeshStandardMaterial({color:0x222222,metalness:0.8})));
-var b=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.2),new THREE.MeshStandardMaterial({color:0x111111,metalness:0.9}));
-b.rotation.x=Math.PI/2;b.position.z=-0.25;g.add(b);
-}else if(type==='rifle'){
-g.add(new THREE.Mesh(new THREE.BoxGeometry(0.1,0.15,0.7),new THREE.MeshStandardMaterial({color:0x333333,metalness:0.8})));
-var b=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.4),new THREE.MeshStandardMaterial({color:0x111111,metalness:0.9}));
-b.rotation.x=Math.PI/2;b.position.z=-0.5;g.add(b);
-var mag=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.2,0.1),new THREE.MeshStandardMaterial({color:0x222222}));
+g.add(new THREE.Mesh(new THREE.BoxGeometry(0.08,0.12,0.35),mat));
+var b=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.15),mat2);
+b.rotation.x=Math.PI/2;b.position.z=-0.22;g.add(b);
+}else if(type==='smg'){
+g.add(new THREE.Mesh(new THREE.BoxGeometry(0.1,0.14,0.55),mat));
+var b=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.3),mat2);
+b.rotation.x=Math.PI/2;b.position.z=-0.4;g.add(b);
+var mag=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.18,0.08),mat);
 mag.position.set(0,-0.15,-0.1);g.add(mag);
 }else if(type==='shotgun'){
-g.add(new THREE.Mesh(new THREE.BoxGeometry(0.12,0.18,0.8),new THREE.MeshStandardMaterial({color:0x442200,metalness:0.6})));
-var b=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.5),new THREE.MeshStandardMaterial({color:0x111111,metalness:0.9}));
-b.rotation.x=Math.PI/2;b.position.z=-0.6;g.add(b);
+g.add(new THREE.Mesh(new THREE.BoxGeometry(0.12,0.16,0.7),woodMat));
+var b=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.45),mat2);
+b.rotation.x=Math.PI/2;b.position.z=-0.55;g.add(b);
+}else if(type==='rifle'){
+g.add(new THREE.Mesh(new THREE.BoxGeometry(0.1,0.15,0.75),mat));
+var b=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,0.4),mat2);
+b.rotation.x=Math.PI/2;b.position.z=-0.55;g.add(b);
+var mag=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.22,0.1),mat);
+mag.position.set(0,-0.18,-0.15);g.add(mag);
+if(type==='ak47'){
+var stock=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.12,0.25),woodMat);
+stock.position.z=0.4;g.add(stock);
+}
+}else if(type==='sniper'){
+g.add(new THREE.Mesh(new THREE.BoxGeometry(0.1,0.14,1.1),mat));
+var b=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.6),mat2);
+b.rotation.x=Math.PI/2;b.position.z=-0.75;g.add(b);
+var scope=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.15),mat2);
+scope.position.set(0,0.1,-0.2);g.add(scope);
+var stock=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.12,0.3),woodMat);
+stock.position.z=0.5;g.add(stock);
 }
 g.position.set(0.25,-0.2,-0.4);
 return g;
@@ -181,13 +323,19 @@ scene.add(camera);
 var muzzle=new THREE.PointLight(0xffaa00,0,4);
 muzzle.position.set(0.25,-0.15,-0.8);
 camera.add(muzzle);
-function createCharacter(color){
+
+// ============ ПЕРСОНАЖИ ============
+function createCharacter(teamColor){
 var g=new THREE.Group();
-var body=new THREE.Mesh(new THREE.BoxGeometry(0.7,1.2,0.4),new THREE.MeshStandardMaterial({color:color}));
+var bodyMat=new THREE.MeshStandardMaterial({color:teamColor});
+var body=new THREE.Mesh(new THREE.BoxGeometry(0.7,1.2,0.4),bodyMat);
 body.position.y=1.0;body.castShadow=true;g.add(body);
 var head=new THREE.Mesh(new THREE.BoxGeometry(0.45,0.45,0.45),new THREE.MeshStandardMaterial({color:0xddaa88}));
 head.position.y=1.85;head.castShadow=true;g.add(head);
-var armMat=new THREE.MeshStandardMaterial({color:color});
+// Шлем
+var helmet=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.2,0.5),new THREE.MeshStandardMaterial({color:0x222222}));
+helmet.position.y=2.05;helmet.castShadow=true;g.add(helmet);
+var armMat=bodyMat;
 var la=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.9,0.2),armMat);
 la.position.set(-0.55,1.0,0);la.castShadow=true;g.add(la);
 var ra=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.9,0.2),armMat);
@@ -197,28 +345,52 @@ var ll=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25),legMat);
 ll.position.set(-0.2,0.45,0);ll.castShadow=true;g.add(ll);
 var rl=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25),legMat);
 rl.position.set(0.2,0.45,0);rl.castShadow=true;g.add(rl);
+// Оружие в руках
+var gunMesh=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.5),new THREE.MeshStandardMaterial({color:0x111111}));
+gunMesh.position.set(0.3,1.1,-0.3);g.add(gunMesh);
 return g;
 }
-var enemies=[];
-function spawnEnemy(){
-var g=createCharacter(0xaa2222);
-var x,z;
-do{x=(Math.random()-0.5)*70;z=(Math.random()-0.5)*70;}
-while(Math.hypot(x-player.pos.x,z-player.pos.z)<15);
+
+// ============ AI ============
+var allBots=[];
+function createBot(team,name,isAdvanced){
+var color=team==='CT'?0x4488cc:0xcc4444;
+var g=createCharacter(color);
+var spawn=team==='CT'?CT_SPAWN:T_SPAWN;
+var x=spawn.x+(Math.random()-0.5)*10;
+var z=spawn.z+(Math.random()-0.5)*10;
 g.position.set(x,0,z);
-g.userData={hp:100,lastShot:0,speed:2.5+Math.random()*1.5};
+g.userData={
+hp:100,
+team:team,
+name:name,
+alive:true,
+speed:3+Math.random()*1.5,
+lastShot:0,
+state:'advance', // advance, combat, cover, strafe
+target:null,
+stateTimer:0,
+strafeDir:Math.random()>0.5?1:-1,
+coverTarget:null,
+weapon:team==='CT'?'m4a4':'ak47',
+isAdvanced:isAdvanced,
+accuracy:isAdvanced?0.6:0.35
+};
 scene.add(g);
-enemies.push(g);
+allBots.push(g);
+return g;
 }
+
+// ============ ЗВУК ============
 var audioCtx;
 function initAudio(){try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}
 function playShot(){
 if(!audioCtx)return;
 var o=audioCtx.createOscillator(),g=audioCtx.createGain();
 o.type='square';
-o.frequency.setValueAtTime(150,audioCtx.currentTime);
+o.frequency.setValueAtTime(180,audioCtx.currentTime);
 o.frequency.exponentialRampToValueAtTime(30,audioCtx.currentTime+0.1);
-g.gain.setValueAtTime(0.2,audioCtx.currentTime);
+g.gain.setValueAtTime(0.15,audioCtx.currentTime);
 g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.1);
 o.connect(g);g.connect(audioCtx.destination);
 o.start();o.stop(audioCtx.currentTime+0.1);
@@ -229,7 +401,7 @@ var o=audioCtx.createOscillator(),g=audioCtx.createGain();
 o.type='sawtooth';
 o.frequency.setValueAtTime(600,audioCtx.currentTime);
 o.frequency.exponentialRampToValueAtTime(150,audioCtx.currentTime+0.1);
-g.gain.setValueAtTime(0.15,audioCtx.currentTime);
+g.gain.setValueAtTime(0.1,audioCtx.currentTime);
 g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.1);
 o.connect(g);g.connect(audioCtx.destination);
 o.start();o.stop(audioCtx.currentTime+0.1);
@@ -240,11 +412,13 @@ var o=audioCtx.createOscillator(),g=audioCtx.createGain();
 o.type='sine';
 o.frequency.setValueAtTime(800,audioCtx.currentTime);
 o.frequency.setValueAtTime(1000,audioCtx.currentTime+0.1);
-g.gain.setValueAtTime(0.2,audioCtx.currentTime);
+g.gain.setValueAtTime(0.15,audioCtx.currentTime);
 g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.2);
 o.connect(g);g.connect(audioCtx.destination);
 o.start();o.stop(audioCtx.currentTime+0.2);
 }
+
+// ============ УПРАВЛЕНИЕ ============
 var joystick={active:false,dx:0,dy:0,originX:0,originY:0,touchId:null};
 var look={active:false,lastX:0,lastY:0,touchId:null};
 var firing=false;
@@ -254,8 +428,7 @@ if(isMobile){
 joyZone.addEventListener('touchstart',function(e){
 e.preventDefault();
 var touch=e.changedTouches[0];
-joystick.active=true;
-joystick.touchId=touch.identifier;
+joystick.active=true;joystick.touchId=touch.identifier;
 var rect=joyZone.getBoundingClientRect();
 joystick.originX=rect.left+rect.width/2;
 joystick.originY=rect.top+rect.height/2;
@@ -265,31 +438,26 @@ joyZone.addEventListener('touchmove',function(e){
 e.preventDefault();
 for(var i=0;i<e.changedTouches.length;i++){
 if(e.changedTouches[i].identifier===joystick.touchId){
-updateJoystick(e.changedTouches[i].clientX,e.changedTouches[i].clientY);
-break;
+updateJoystick(e.changedTouches[i].clientX,e.changedTouches[i].clientY);break;
 }
 }
 },{passive:false});
-var endJoystick=function(e){
+var endJoy=function(e){
 for(var i=0;i<e.changedTouches.length;i++){
 if(e.changedTouches[i].identifier===joystick.touchId){
-joystick.active=false;
-joystick.dx=0;joystick.dy=0;
-joyKnob.style.transform='translate(-50%,-50%)';
-break;
+joystick.active=false;joystick.dx=0;joystick.dy=0;
+joyKnob.style.transform='translate(-50%,-50%)';break;
 }
 }
 };
-joyZone.addEventListener('touchend',endJoystick);
-joyZone.addEventListener('touchcancel',endJoystick);
+joyZone.addEventListener('touchend',endJoy);
+joyZone.addEventListener('touchcancel',endJoy);
 document.addEventListener('touchstart',function(e){
 for(var i=0;i<e.changedTouches.length;i++){
 var t=e.changedTouches[i];
-if(t.clientX>innerWidth/2&&!e.target.classList.contains('action-btn')&&!e.target.closest('#shop-menu')&&!e.target.closest('#menu')&&!e.target.closest('#end-menu')){
-look.active=true;
-look.touchId=t.identifier;
-look.lastX=t.clientX;
-look.lastY=t.clientY;
+if(t.clientX>innerWidth/2&&!e.target.classList.contains('action-btn')&&!e.target.closest('#shop-menu')&&!e.target.closest('#menu')&&!e.target.closest('#end-menu')&&!e.target.closest('#round-end')){
+look.active=true;look.touchId=t.identifier;
+look.lastX=t.clientX;look.lastY=t.clientY;
 }
 }
 },{passive:false});
@@ -297,22 +465,18 @@ document.addEventListener('touchmove',function(e){
 for(var i=0;i<e.changedTouches.length;i++){
 var t=e.changedTouches[i];
 if(look.active&&t.identifier===look.touchId){
-var deltaX=t.clientX-look.lastX;
-var deltaY=t.clientY-look.lastY;
-player.yaw-=deltaX*0.005;
-player.pitch-=deltaY*0.005;
+var dx=t.clientX-look.lastX;
+var dy=t.clientY-look.lastY;
+player.yaw-=dx*0.005;
+player.pitch-=dy*0.005;
 player.pitch=Math.max(-Math.PI/2+0.1,Math.min(Math.PI/2-0.1,player.pitch));
-look.lastX=t.clientX;
-look.lastY=t.clientY;
+look.lastX=t.clientX;look.lastY=t.clientY;
 }
 }
 },{passive:false});
 var endLook=function(e){
 for(var i=0;i<e.changedTouches.length;i++){
-if(e.changedTouches[i].identifier===look.touchId){
-look.active=false;
-break;
-}
+if(e.changedTouches[i].identifier===look.touchId){look.active=false;break;}
 }
 };
 document.addEventListener('touchend',endLook);
@@ -328,6 +492,7 @@ document.getElementById('fire-btn').style.display='none';
 document.getElementById('reload-btn').style.display='none';
 document.getElementById('shop-btn').style.display='none';
 var keys={};
+var locked=false;
 window.addEventListener('keydown',function(e){
 keys[e.code]=true;
 if(e.code==='KeyR')reload();
@@ -336,7 +501,7 @@ if(e.code==='Escape')closeShop();
 });
 window.addEventListener('keyup',function(e){keys[e.code]=false;});
 renderer.domElement.addEventListener('click',function(){
-if(!gameOver&&!shopOpen)renderer.domElement.requestPointerLock();
+if(!gameOver&&!shopOpen&&roundActive)renderer.domElement.requestPointerLock();
 });
 document.addEventListener('pointerlockchange',function(){
 locked=document.pointerLockElement===renderer.domElement;
@@ -355,8 +520,6 @@ if(e.button===0)firing=false;
 });
 window.getKeys=function(){return keys;};
 }
-var locked=false;
-var shopOpen=false;
 function updateJoystick(x,y){
 var dx=x-joystick.originX;
 var dy=y-joystick.originY;
@@ -367,33 +530,46 @@ joyKnob.style.transform='translate(calc(-50% + '+dx+'px), calc(-50% + '+dy+'px))
 joystick.dx=dx/maxDist;
 joystick.dy=dy/maxDist;
 }
+
+// ============ МАГАЗИН ============
+var shopOpen=false;
 function openShop(){
+if(!roundActive||!player.alive)return;
 shopOpen=true;
 var shopItems=document.getElementById('shop-items');
 shopItems.innerHTML='';
-var types=['rifle','shotgun'];
-for(var i=0;i<types.length;i++){
-var key=types[i];
+var wpKeys=['usp','p250','deagle','mp5','p90','nova','ak47','m4a4','awp'];
+for(var i=0;i<wpKeys.length;i++){
+var key=wpKeys[i];
 var data=weaponsData[key];
-var owned=player.weapons[key]!==null;
+var owned=player.weapons[key]!==undefined;
 var item=document.createElement('div');
 item.className='shop-item';
-var btnText=owned?'КУПЛЕНО':data.price+'💰';
+var btnText=owned?'В ИНВЕНТАРЕ':data.price+'💰';
 var dis=(owned||player.money<data.price)?'disabled':'';
-item.innerHTML='<div class="shop-item-info"><div class="shop-item-name">'+data.name+'</div><div class="shop-item-desc">Урон: '+data.damage+' | Магазин: '+data.maxAmmo+'</div></div><button '+dis+' data-weapon="'+key+'">'+btnText+'</button>';
+var cls=owned?'owned':'';
+item.innerHTML='<div class="shop-item-info"><div class="shop-item-name">'+data.name+'</div><div class="shop-item-desc">Урон: '+data.damage+' | Магазин: '+data.maxAmmo+' | Скор: '+(1000/data.fireRate).toFixed(1)+'/с</div></div><button class="'+cls+'" '+dis+' data-weapon="'+key+'">'+btnText+'</button>';
 shopItems.appendChild(item);
 }
+// Патроны
 var ammoItem=document.createElement('div');
 ammoItem.className='shop-item';
 var wp=player.weapons[player.currentWeapon];
-var ammoDis=player.money<200?'disabled':'';
-ammoItem.innerHTML='<div class="shop-item-info"><div class="shop-item-name">ПАТРОНЫ</div><div class="shop-item-desc">Полный резерв для '+wp.name+'</div></div><button '+ammoDis+' data-action="ammo">200💰</button>';
+var ammoDis=player.money<300?'disabled':'';
+ammoItem.innerHTML='<div class="shop-item-info"><div class="shop-item-name">ПАТРОНЫ</div><div class="shop-item-desc">Полный резерв для '+wp.name+'</div></div><button '+ammoDis+' data-action="ammo">300💰</button>';
 shopItems.appendChild(ammoItem);
+// Аптечка
 var healItem=document.createElement('div');
 healItem.className='shop-item';
-var healDis=(player.money<300||player.hp>=player.maxHp)?'disabled':'';
-healItem.innerHTML='<div class="shop-item-info"><div class="shop-item-name">АПТЕЧКА</div><div class="shop-item-desc">Восстанавливает 50 HP</div></div><button '+healDis+' data-action="heal">300💰</button>';
+var healDis=(player.money<400||player.hp>=player.maxHp)?'disabled':'';
+healItem.innerHTML='<div class="shop-item-info"><div class="shop-item-name">АПТЕЧКА</div><div class="shop-item-desc">Полное восстановление HP</div></div><button '+healDis+' data-action="heal">400💰</button>';
 shopItems.appendChild(healItem);
+// Броня
+var armorItem=document.createElement('div');
+armorItem.className='shop-item';
+var armorDis=(player.money<600||player.maxHp>=150)?'disabled':'';
+armorItem.innerHTML='<div class="shop-item-info"><div class="shop-item-name">БРОНЕЖИЛЕТ</div><div class="shop-item-desc">Макс. HP: 100 → 150</div></div><button '+armorDis+' data-action="armor">600💰</button>';
+shopItems.appendChild(armorItem);
 var btns=shopItems.querySelectorAll('button');
 for(var j=0;j<btns.length;j++){
 btns[j].addEventListener('click',function(){
@@ -402,27 +578,20 @@ var a=this.getAttribute('data-action');
 if(w)buyWeapon(w);
 if(a==='ammo')buyAmmo();
 if(a==='heal')buyHeal();
+if(a==='armor')buyArmor();
 });
-btns[j].addEventListener('touchstart',function(e){
-e.preventDefault();
-var w=this.getAttribute('data-weapon');
-var a=this.getAttribute('data-action');
-if(w)buyWeapon(w);
-if(a==='ammo')buyAmmo();
-if(a==='heal')buyHeal();
-},{passive:false});
 }
-document.getElementById('shop-menu').classList.remove('hidden');
+document.getElementById('shop-menu').classList.add('active');
 }
 function closeShop(){
 shopOpen=false;
-document.getElementById('shop-menu').classList.add('hidden');
+document.getElementById('shop-menu').classList.remove('active');
 }
 function buyWeapon(type){
 var data=weaponsData[type];
 if(player.money>=data.price&&!player.weapons[type]){
 player.money-=data.price;
-player.weapons[type]={name:data.name,damage:data.damage,fireRate:data.fireRate,ammo:data.maxAmmo,maxAmmo:data.maxAmmo,reserve:data.reserve,reloadTime:data.reloadTime};
+player.weapons[type]={name:data.name,damage:data.damage,fireRate:data.fireRate,ammo:data.maxAmmo,maxAmmo:data.maxAmmo,reserve:data.reserve,reloadTime:data.reloadTime,spread:data.spread,type:data.type};
 player.currentWeapon=type;
 switchWeapon();
 playBuy();
@@ -431,63 +600,70 @@ openShop();
 }
 }
 function buyAmmo(){
-if(player.money>=200){
-player.money-=200;
+if(player.money>=300){
+player.money-=300;
 var wp=player.weapons[player.currentWeapon];
-wp.reserve=wp.maxAmmo*3;
-playBuy();
-updateHUD();
-openShop();
+wp.reserve=wp.maxAmmo*4;
+playBuy();updateHUD();openShop();
 }
 }
 function buyHeal(){
-if(player.money>=300&&player.hp<player.maxHp){
-player.money-=300;
-player.hp=Math.min(player.maxHp,player.hp+50);
-playBuy();
-updateHUD();
-openShop();
+if(player.money>=400&&player.hp<player.maxHp){
+player.money-=400;
+player.hp=player.maxHp;
+playBuy();updateHUD();openShop();
+}
+}
+function buyArmor(){
+if(player.money>=600&&player.maxHp<150){
+player.money-=600;
+player.maxHp=150;
+player.hp=Math.min(player.hp+50,player.maxHp);
+playBuy();updateHUD();openShop();
 }
 }
 function switchWeapon(){
 camera.remove(gun);
-gun=createGunModel(player.currentWeapon);
+gun=createGunModel(weaponsData[player.currentWeapon].type);
 camera.add(gun);
 document.getElementById('weapon-name').textContent=player.weapons[player.currentWeapon].name;
 }
+
+// ============ СТРЕЛЬБА ============
 var raycaster=new THREE.Raycaster();
 var lastShot=0;
 function shoot(){
 var wp=player.weapons[player.currentWeapon];
 var now=performance.now();
-if(player.reloading||wp.ammo<=0||now-lastShot<wp.fireRate||shopOpen)return;
+if(player.reloading||wp.ammo<=0||now-lastShot<wp.fireRate||shopOpen||!player.alive||!roundActive)return;
 lastShot=now;
 wp.ammo--;
 playShot();
 gun.position.z=-0.3;
 muzzle.intensity=4;
 setTimeout(function(){muzzle.intensity=0;gun.position.z=-0.4;},60);
-raycaster.setFromCamera(new THREE.Vector2(0,0),camera);
-var enemyMeshes=[];
-for(var i=0;i<enemies.length;i++){
-enemies[i].traverse(function(c){if(c.isMesh)enemyMeshes.push(c);});
+// Разброс
+var spread=wp.spread;
+var dir=new THREE.Vector3((Math.random()-0.5)*spread,(Math.random()-0.5)*spread,-1);
+dir.applyQuaternion(camera.quaternion);
+dir.normalize();
+raycaster.set(camera.position,dir);
+var targets=[];
+for(var i=0;i<allBots.length;i++){
+if(allBots[i].userData.alive)allBots[i].traverse(function(c){if(c.isMesh)targets.push(c);});
 }
-var hits=raycaster.intersectObjects(enemyMeshes);
+var hits=raycaster.intersectObjects(targets);
 if(hits.length>0){
 var obj=hits[0].object;
 while(obj.parent&&obj.userData.hp===undefined)obj=obj.parent;
-if(obj.userData.hp!==undefined){
-var dmg=hits[0].object.geometry.parameters.height>1?wp.damage:wp.damage*2;
+if(obj.userData.hp!==undefined&&obj.userData.team!==player.team){
+var headshot=hits[0].object.geometry.parameters&&hits[0].object.geometry.parameters.height<0.5;
+var dmg=headshot?wp.damage*3:wp.damage;
 obj.userData.hp-=dmg;
 playHit();
 showHitMarker();
 if(obj.userData.hp<=0){
-scene.remove(obj);
-var idx=enemies.indexOf(obj);
-if(idx>-1)enemies.splice(idx,1);
-player.score+=100;
-player.kills++;
-player.money+=150;
+killBot(obj,player);
 }
 }
 }
@@ -515,6 +691,33 @@ var h=document.getElementById('hit-marker');
 h.style.opacity='1';
 setTimeout(function(){h.style.opacity='0';},120);
 }
+
+// ============ УБИЙСТВА ============
+function killBot(bot,killer){
+bot.userData.alive=false;
+// Анимация падения
+bot.rotation.x=Math.PI/2;
+bot.position.y=0.3;
+var killerName=killer===player?'ТЫ':killer.userData.name;
+var victimName=bot.userData.name;
+addKillFeed(killerName,victimName,killer===player||killer.userData.team===player.team);
+if(killer===player){
+player.score+=100;
+player.kills++;
+player.money+=300;
+}
+}
+function addKillFeed(killer,victim,friendly){
+var feed=document.getElementById('kill-feed');
+var msg=document.createElement('div');
+msg.className='kill-msg';
+msg.style.color=friendly?'#5af':'#f55';
+msg.textContent=killer+' ✕ '+victim;
+feed.appendChild(msg);
+setTimeout(function(){if(msg.parentNode)msg.parentNode.removeChild(msg);},3000);
+}
+
+// ============ КОЛЛИЗИИ ============
 function collideWalls(pos,radius){
 if(!radius)radius=0.4;
 for(var i=0;i<walls.length;i++){
@@ -529,22 +732,234 @@ else pos.x=w.position.x+Math.sign(pos.x-w.position.x)*(ww/2+radius);
 }
 }
 }
-var lastSpawn=0,gameOver=false;
+
+// ============ AI БОТОВ ============
+function findTarget(bot){
+var enemies=[];
+if(bot.userData.team==='CT'){
+for(var i=0;i<allBots.length;i++){
+if(allBots[i].userData.team==='T'&&allBots[i].userData.alive)enemies.push(allBots[i]);
+}
+if(player.alive&&player.team==='T')enemies.push(player);
+}else{
+for(var i=0;i<allBots.length;i++){
+if(allBots[i].userData.team==='CT'&&allBots[i].userData.alive)enemies.push(allBots[i]);
+}
+if(player.alive&&player.team==='CT')enemies.push(player);
+}
+var closest=null,minDist=Infinity;
+for(var i=0;i<enemies.length;i++){
+var e=enemies[i];
+var ep=e===player?player.pos:e.position;
+var d=bot.position.distanceTo(ep);
+if(d<minDist){minDist=d;closest=e;}
+}
+return closest;
+}
+function hasLineOfSight(from,to){
+var dir=new THREE.Vector3().subVectors(to,from);
+var dist=dir.length();
+dir.normalize();
+raycaster.set(from,dir);
+raycaster.far=dist;
+var hits=raycaster.intersectObjects(walls);
+raycaster.far=Infinity;
+return hits.length===0;
+}
+function updateBot(bot,dt,now){
+if(!bot.userData.alive||!roundActive)return;
+var target=findTarget(bot);
+bot.userData.target=target;
+if(!target){
+// Патруль к центру
+var center=new THREE.Vector3(0,0,0);
+var dir=new THREE.Vector3().subVectors(center,bot.position);
+dir.y=0;
+if(dir.length()>2){
+dir.normalize();
+bot.rotation.y=Math.atan2(dir.x,dir.z);
+bot.position.x+=dir.x*bot.userData.speed*dt;
+bot.position.z+=dir.z*bot.userData.speed*dt;
+collideWalls(bot.position);
+}
+return;
+}
+var tp=target===player?player.pos:target.position;
+var toTarget=new THREE.Vector3().subVectors(tp,bot.position);
+toTarget.y=0;
+var dist=toTarget.length();
+toTarget.normalize();
+var eyePos=new THREE.Vector3(bot.position.x,1.7,bot.position.z);
+var targetEye=new THREE.Vector3(tp.x,1.7,tp.z);
+var canSee=hasLineOfSight(eyePos,targetEye)&&dist<40;
+if(canSee){
+bot.userData.state='combat';
+bot.userData.stateTimer=0;
+}else{
+bot.userData.stateTimer+=dt;
+if(bot.userData.stateTimer>2){
+bot.userData.state='advance';
+bot.userData.stateTimer=0;
+}
+}
+if(bot.userData.state==='combat'){
+// Поворот к цели
+bot.rotation.y=Math.atan2(toTarget.x,toTarget.z);
+// Стрейф для продвинутых
+if(bot.userData.isAdvanced&&dist<20){
+var strafe=new THREE.Vector3(-toTarget.z,0,toTarget.x);
+bot.position.x+=strafe.x*bot.userData.strafeDir*bot.userData.speed*0.5*dt;
+bot.position.z+=strafe.z*bot.userData.strafeDir*bot.userData.speed*0.5*dt;
+if(Math.random()<0.02)bot.userData.strafeDir*=-1;
+collideWalls(bot.position);
+}else if(dist>15){
+// Сближение
+bot.position.x+=toTarget.x*bot.userData.speed*dt;
+bot.position.z+=toTarget.z*bot.userData.speed*dt;
+collideWalls(bot.position);
+}
+// Стрельба
+var fireRate=weaponsData[bot.userData.weapon].fireRate*1.5;
+if(now-bot.userData.lastShot>fireRate&&dist<35){
+bot.userData.lastShot=now;
+// Шанс попадания
+var hitChance=bot.userData.accuracy*(1-dist/50);
+if(Math.random()<hitChance){
+var dmg=weaponsData[bot.userData.weapon].damage*0.6;
+if(target===player){
+if(player.alive){
+player.hp-=dmg;
+playHit();
+if(player.hp<=0){
+player.hp=0;
+player.alive=false;
+addKillFeed(bot.userData.name,'ТЫ',false);
+}
+updateHUD();
+}
+}else if(target.userData.alive){
+target.userData.hp-=dmg;
+if(target.userData.hp<=0){
+killBot(target,bot);
+}
+}
+}
+playShot();
+}
+}else if(bot.userData.state==='advance'){
+// Движение к цели
+bot.rotation.y=Math.atan2(toTarget.x,toTarget.z);
+bot.position.x+=toTarget.x*bot.userData.speed*dt;
+bot.position.z+=toTarget.z*bot.userData.speed*dt;
+collideWalls(bot.position);
+}
+}
+
+// ============ СИСТЕМА РАУНДОВ ============
+var roundNum=1;
+var ctScore=0,tScore=0;
+var roundActive=false;
+var roundTime=105; // 1:45
+var roundTimer=roundTime;
+var gameOver=false;
+var MAX_ROUNDS=10;
+function startRound(){
+// Сброс игрока
+player.pos.set(CT_SPAWN.x,1.7,CT_SPAWN.z);
+player.yaw=0;player.pitch=0;
+player.hp=player.maxHp;
+player.alive=true;
+player.reloading=false;
+// Восстановить патроны
+for(var k in player.weapons){
+player.weapons[k].ammo=player.weapons[k].maxAmmo;
+}
+// Удалить старых ботов
+for(var i=0;i<allBots.length;i++)scene.remove(allBots[i]);
+allBots=[];
+// Создать 3 тиммейта CT (игрок + 3 = 4, но просили 4 тиммейта = всего 5 CT)
+var ctNames=['АЛЕКС','ВИКТОР','МАКС'];
+for(var i=0;i<3;i++){
+createBot('CT',ctNames[i],false);
+}
+// Создать 5 врагов T (продвинутых)
+var tNames=['ИВАН','ДМИТРИЙ','СЕРГЕЙ','АНДРЕЙ','НИКОЛАЙ'];
+for(var i=0;i<5;i++){
+createBot('T',tNames[i],true);
+}
+roundActive=true;
+roundTimer=roundTime;
+prevTime=performance.now();
+showRoundMessage('РАУНД '+roundNum,2000);
+}
+function endRound(winner){
+roundActive=false;
+if(winner==='CT'){
+ctScore++;
+player.money+=3000;
+showRoundMessage('ПОБЕДА CT!',2500);
+}else{
+tScore++;
+player.money+=1400;
+showRoundMessage('ПОБЕДА T!',2500);
+}
+// Бонус за раунд
+player.money+=500;
+if(player.money>16000)player.money=16000;
+updateHUD();
+setTimeout(function(){
+if(roundNum>=MAX_ROUNDS||ctScore>=6||tScore>=6){
+showGameOver();
+}else{
+showRoundEnd(winner);
+}
+},2500);
+}
+function showRoundMessage(text,duration){
+var msg=document.getElementById('round-msg');
+msg.textContent=text;
+msg.style.opacity='1';
+msg.style.color=text.indexOf('CT')>-1?'#5af':'#f55';
+setTimeout(function(){msg.style.opacity='0';},duration);
+}
+function showRoundEnd(winner){
+var menu=document.getElementById('round-end');
+menu.classList.add('active');
+document.getElementById('round-end-title').textContent=winner==='CT'?'РАУНД ЗА CT':'РАУНД ЗА T';
+document.getElementById('round-end-title').style.color=winner==='CT'?'#5af':'#f55';
+document.getElementById('round-end-stats').innerHTML='<div style="font-size:18px;margin:15px 0;line-height:1.8">СЧЕТ: CT '+ctScore+' - '+tScore+' T<br>ТВОИ УБИЙСТВ: '+player.kills+'<br>ДЕНЬГИ: '+player.money+'💰<br>Следующий раунд: '+roundNum+' → '+(roundNum+1)+'</div>';
+}
+function showGameOver(){
+gameOver=true;
+var menu=document.getElementById('end-menu');
+menu.classList.add('active');
+var win=ctScore>tScore;
+document.getElementById('end-title').textContent=win?'ПОБЕДА!':'ПОРАЖЕНИЕ';
+document.getElementById('end-title').style.color=win?'#0f0':'#f00';
+document.getElementById('end-stats').innerHTML='<div style="font-size:18px;margin:15px 0;line-height:1.8">ФИНАЛЬНЫЙ СЧЕТ:<br>CT: '+ctScore+' - T: '+tScore+'<br><br>ТВОИ УБИЙСТВ: '+player.kills+'<br>СЧЕТ: '+player.score+'<br>ДЕНЬГИ: '+player.money+'💰</div>';
+}
+
+// ============ ИГРОВОЙ ЦИКЛ ============
 var prevTime=performance.now();
-var gameDuration=0;
-var GAME_TIME=120;
 function update(){
 requestAnimationFrame(update);
 if(gameOver){renderer.render(scene,camera);return;}
-if(shopOpen){renderer.render(scene,camera);return;}
 var now=performance.now();
 var dt=Math.min((now-prevTime)/1000,0.1);
 prevTime=now;
-gameDuration+=dt;
-var remaining=Math.max(0,GAME_TIME-gameDuration);
-var mins=Math.floor(remaining/60);
-var secs=Math.floor(remaining%60);
-document.getElementById('timer').textContent=mins+':'+(secs<10?'0':'')+secs;
+// Таймер раунда
+if(roundActive){
+roundTimer-=dt;
+var mins=Math.floor(roundTimer/60);
+var secs=Math.floor(roundTimer%60);
+document.getElementById('round-timer').textContent=mins+':'+(secs<10?'0':'')+secs;
+if(roundTimer<=0){
+endRound('T');
+return;
+}
+}
+// Движение игрока
+if(player.alive&&roundActive&&!shopOpen){
 var moveX=0,moveZ=0;
 if(isMobile){
 if(joystick.active){
@@ -573,8 +988,9 @@ moveX*=6*dt;moveZ*=6*dt;
 player.pos.x+=moveX;
 player.pos.z+=moveZ;
 collideWalls(player.pos);
-player.pos.x=Math.max(-39,Math.min(39,player.pos.x));
-player.pos.z=Math.max(-39,Math.min(39,player.pos.z));
+player.pos.x=Math.max(-59,Math.min(59,player.pos.x));
+player.pos.z=Math.max(-59,Math.min(59,player.pos.z));
+}
 if(player.pos.y>1.7){
 player.vel.y-=15*dt;
 player.pos.y+=player.vel.y*dt;
@@ -584,124 +1000,79 @@ camera.position.copy(player.pos);
 camera.rotation.order='YXZ';
 camera.rotation.y=player.yaw;
 camera.rotation.x=player.pitch;
-if(firing)shoot();
-for(var i=0;i<enemies.length;i++){
-var e=enemies[i];
-var toPlayer=new THREE.Vector3().subVectors(player.pos,e.position);
-toPlayer.y=0;
-var dist=toPlayer.length();
-toPlayer.normalize();
-e.rotation.y=Math.atan2(toPlayer.x,toPlayer.z);
-if(dist>6){
-e.position.x+=toPlayer.x*e.userData.speed*dt;
-e.position.z+=toPlayer.z*e.userData.speed*dt;
+if(firing&&player.alive)shoot();
+// Обновление ботов
+for(var i=0;i<allBots.length;i++){
+updateBot(allBots[i],dt,now);
 }
-if(now-e.userData.lastShot>1800&&dist<25){
-e.userData.lastShot=now;
-if(Math.random()<0.4-dist*0.01){
-player.hp-=10;
-playHit();
-if(player.hp<=0){player.hp=0;endGame(false);}
-updateHUD();
+// Проверка конца раунда
+if(roundActive){
+var ctAlive=player.alive&&player.team==='CT';
+var tAlive=false;
+for(var i=0;i<allBots.length;i++){
+if(allBots[i].userData.alive){
+if(allBots[i].userData.team==='CT')ctAlive=true;
+else tAlive=true;
 }
 }
-}
-if(now-lastSpawn>3500&&enemies.length<5){
-spawnEnemy();
-lastSpawn=now;
-}
-if(enemies.length===0&&now-lastSpawn>1000){
-spawnEnemy();spawnEnemy();
-lastSpawn=now;
-}
-if(gameDuration>=GAME_TIME){
-endGame(true);
+if(!ctAlive&&roundActive){endRound('T');return;}
+if(!tAlive&&roundActive){endRound('CT');return;}
 }
 updateHUD();
 renderer.render(scene,camera);
 }
 function updateHUD(){
-document.getElementById('hp').textContent=Math.max(0,player.hp);
+document.getElementById('hp').textContent=Math.max(0,Math.floor(player.hp));
 document.getElementById('hp-fill').style.width=(player.hp/player.maxHp*100)+'%';
-document.getElementById('hp-fill').style.background=player.hp>50?'#0f0':player.hp>25?'#ff0':'#f00';
+document.getElementById('hp-fill').style.background=player.hp>player.maxHp*0.5?'#0f0':player.hp>player.maxHp*0.25?'#ff0':'#f00';
 document.getElementById('money').textContent=player.money;
 var wp=player.weapons[player.currentWeapon];
 document.getElementById('ammo').textContent=wp.ammo;
 document.getElementById('reserve').textContent=wp.reserve;
 document.getElementById('score').textContent=player.score;
 document.getElementById('kills').textContent=player.kills;
+document.getElementById('round-num').textContent=roundNum;
+document.getElementById('ct-score').textContent=ctScore;
+document.getElementById('t-score').textContent=tScore;
 }
-function endGame(win){
-gameOver=true;
-firing=false;
-if(!isMobile&&document.pointerLockElement)document.exitPointerLock();
-var menu=document.getElementById('end-menu');
-menu.classList.remove('hidden');
-document.getElementById('end-title').textContent=win?'МИССИЯ ВЫПОЛНЕНА!':'ВЫ УБИТЫ';
-document.getElementById('end-title').style.color=win?'#0f0':'#f00';
-document.getElementById('end-stats').innerHTML='<div style="font-size:18px;margin:20px 0;line-height:2">СЧЕТ: '+player.score+'<br>УБИЙСТВ: '+player.kills+'<br>ДЕНЬГИ: '+player.money+'💰<br>ВРЕМЯ: '+Math.floor(gameDuration)+'с</div>';
-}
-document.getElementById('startBtn').addEventListener('click',function(){
+
+// ============ СТАРТ ============
+document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('startBtn').addEventListener('touchstart',function(e){e.preventDefault();startGame();},{passive:false});
+function startGame(){
 initAudio();
-document.getElementById('menu').classList.add('hidden');
-player.pos.set(0,1.7,25);
-player.yaw=0;player.pitch=0;
-player.hp=100;player.money=0;player.score=0;player.kills=0;
-player.currentWeapon='pistol';
-player.weapons={
-pistol:{name:'ПИСТОЛЕТ',damage:25,fireRate:300,ammo:12,maxAmmo:12,reserve:36,reloadTime:1200},
-rifle:null,shotgun:null
-};
+document.getElementById('menu').classList.remove('active');
+roundNum=1;ctScore=0;tScore=0;gameOver=false;
+player.money=800;player.score=0;player.kills=0;
+player.maxHp=100;
+player.currentWeapon='glock';
+player.weapons={glock:{name:'GLOCK-18',damage:22,fireRate:150,ammo:20,maxAmmo:20,reserve:60,reloadTime:1800,spread:0.02,type:'pistol'}};
 switchWeapon();
-for(var i=0;i<enemies.length;i++)scene.remove(enemies[i]);
-enemies.length=0;
-gameOver=false;
-gameDuration=0;
-firing=false;
-for(var i=0;i<3;i++)spawnEnemy();
-prevTime=performance.now();
-update();
+startRound();
+}
+document.getElementById('next-round-btn').addEventListener('click',function(){
+document.getElementById('round-end').classList.remove('active');
+roundNum++;
+startRound();
 });
-document.getElementById('startBtn').addEventListener('touchstart',function(e){
+document.getElementById('next-round-btn').addEventListener('touchstart',function(e){
 e.preventDefault();
-initAudio();
-document.getElementById('menu').classList.add('hidden');
-player.pos.set(0,1.7,25);
-player.yaw=0;player.pitch=0;
-player.hp=100;player.money=0;player.score=0;player.kills=0;
-player.currentWeapon='pistol';
-player.weapons={
-pistol:{name:'ПИСТОЛЕТ',damage:25,fireRate:300,ammo:12,maxAmmo:12,reserve:36,reloadTime:1200},
-rifle:null,shotgun:null
-};
-switchWeapon();
-for(var i=0;i<enemies.length;i++)scene.remove(enemies[i]);
-enemies.length=0;
-gameOver=false;
-gameDuration=0;
-firing=false;
-for(var i=0;i<3;i++)spawnEnemy();
-prevTime=performance.now();
-update();
+document.getElementById('round-end').classList.remove('active');
+roundNum++;
+startRound();
 },{passive:false});
 document.getElementById('restartBtn').addEventListener('click',function(){
-document.getElementById('end-menu').classList.add('hidden');
-document.getElementById('menu').classList.remove('hidden');
+document.getElementById('end-menu').classList.remove('active');
+document.getElementById('menu').classList.add('active');
 });
-document.getElementById('restartBtn').addEventListener('touchstart',function(e){
-e.preventDefault();
-document.getElementById('end-menu').classList.add('hidden');
-document.getElementById('menu').classList.remove('hidden');
-},{passive:false});
-document.getElementById('close-shop').addEventListener('click',function(){
-closeShop();
-});
+document.getElementById('close-shop').addEventListener('click',closeShop);
 window.addEventListener('resize',function(){
 camera.aspect=innerWidth/innerHeight;
 camera.updateProjectionMatrix();
 renderer.setSize(innerWidth,innerHeight);
 });
 renderer.render(scene,camera);
+update();
 </script>
 </body>
 </html>
