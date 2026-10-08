@@ -26,21 +26,25 @@ canvas{display:block;width:100vw;height:100vh}
 #fire-btn{bottom:30px;right:20px;width:80px;height:80px;background:rgba(255,50,50,0.4);font-size:14px}
 #reload-btn{bottom:130px;right:30px;width:55px;height:55px;background:rgba(50,150,255,0.4);font-size:12px}
 #shop-btn{bottom:200px;right:40px;width:50px;height:50px;background:rgba(255,200,0,0.4);font-size:12px}
+#fullscreen-btn{position:absolute;top:10px;right:10px;width:40px;height:40px;background:rgba(0,200,0,0.4);border:2px solid #0f0;border-radius:8px;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;pointer-events:auto;z-index:20;cursor:pointer}
+#fullscreen-btn:active{background:rgba(0,200,0,0.8)}
 #weapon-name{position:absolute;bottom:120px;right:110px;color:#fff;font-size:14px;text-shadow:1px 1px 0 #000;pointer-events:none;z-index:10}
-#menu,#shop-menu,#end-menu,#round-end{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);color:#ffcc00;text-align:center;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;font-size:14px;padding:15px;overflow-y:auto}
+#menu,#shop-menu,#end-menu,#round-end{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);color:#ffcc00;text-align:center;display:none;flex-direction:column;align-items:center;z-index:100;font-size:14px;padding:15px}
 #menu.active,#shop-menu.active,#end-menu.active,#round-end.active{display:flex}
+#menu{justify-content:center}
 #menu h1,#end-menu h1{font-size:32px;margin:0 0 15px;color:#ff3300}
 #menu button,#end-menu button{background:#ffcc00;color:#000;border:none;padding:15px 40px;font-size:20px;font-weight:bold;margin-top:20px;border-radius:8px;cursor:pointer}
-#shop-menu{justify-content:flex-start;padding-top:30px}
-#shop-menu h2{font-size:24px;margin:0 0 15px;color:#ffcc00}
-.shop-item{background:rgba(255,204,0,0.1);border:2px solid #ffcc00;padding:10px;margin:6px 0;width:95%;max-width:450px;display:flex;justify-content:space-between;align-items:center;border-radius:8px}
+#shop-menu{justify-content:flex-start;padding-top:20px;padding-bottom:80px}
+#shop-menu h2{font-size:24px;margin:0 0 15px;color:#ffcc00;position:sticky;top:0;background:rgba(0,0,0,0.95);padding:10px;z-index:101;width:100%}
+#shop-items{width:100%;max-width:500px;overflow-y:auto;flex:1;padding-bottom:20px}
+.shop-item{background:rgba(255,204,0,0.1);border:2px solid #ffcc00;padding:10px;margin:6px 0;width:100%;display:flex;justify-content:space-between;align-items:center;border-radius:8px}
 .shop-item-info{text-align:left;flex:1}
 .shop-item-name{font-size:15px;font-weight:bold;color:#fff}
 .shop-item-desc{font-size:11px;color:#aaa;margin-top:3px}
-.shop-item button{background:#0f0;color:#000;border:none;padding:8px 15px;font-size:13px;font-weight:bold;border-radius:5px;cursor:pointer}
+.shop-item button{background:#0f0;color:#000;border:none;padding:8px 15px;font-size:13px;font-weight:bold;border-radius:5px;cursor:pointer;min-width:100px}
 .shop-item button:disabled{background:#555;color:#888}
 .shop-item button.owned{background:#888}
-#close-shop{background:#f00;color:#fff;border:none;padding:12px 30px;font-size:16px;margin-top:15px;border-radius:8px;cursor:pointer}
+#close-shop{background:#f00;color:#fff;border:none;padding:12px 30px;font-size:16px;border-radius:8px;cursor:pointer;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:102;min-width:200px}
 #hit-marker{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#f00;font-size:50px;font-weight:bold;opacity:0;pointer-events:none;z-index:15}
 #kill-feed{position:absolute;top:60px;right:10px;color:#fff;font-size:13px;text-shadow:1px 1px 0 #000;pointer-events:none;z-index:10;text-align:right}
 .kill-msg{background:rgba(0,0,0,0.6);padding:3px 8px;margin:2px 0;border-radius:3px;animation:fadeOut 3s forwards}
@@ -77,6 +81,7 @@ HP: <span id="hp">100</span>
 <button id="fire-btn" class="action-btn">ОГОНЬ</button>
 <button id="reload-btn" class="action-btn">R</button>
 <button id="shop-btn" class="action-btn">🛒</button>
+<button id="fullscreen-btn" title="Полный экран">⛶</button>
 <div id="menu" class="active">
 <h1>MINI STRIKE: INFERNO</h1>
 <div id="controls-info"></div>
@@ -102,7 +107,7 @@ HP: <span id="hp">100</span>
 <script>
 var isMobile=/Android|iPhone|iPad|iPod|Opera Mini|IEMobile/i.test(navigator.userAgent)||('ontouchstart' in window);
 if(isMobile){
-document.getElementById('controls-info').innerHTML='ЛЕВАЯ часть: джойстик<br>ПРАВАЯ часть: обзор<br>Кнопки: ОГОНЬ, R, 🛒';
+document.getElementById('controls-info').innerHTML='ЛЕВАЯ часть: джойстик<br>ПРАВАЯ часть: обзор<br>Кнопки: ОГОНЬ, R, 🛒, ⛶';
 }else{
 document.getElementById('controls-info').innerHTML='WASD — движение | МЫШЬ — обзор<br>ЛКМ — огонь | R — перезарядка | B — магазин<br>Кликни по экрану для захвата мыши';
 }
@@ -336,7 +341,7 @@ hp:100,
 team:team,
 name:name,
 alive:true,
-speed:3+Math.random()*1.5,
+speed:2.5+Math.random()*1,
 lastShot:0,
 state:'advance',
 target:null,
@@ -344,7 +349,7 @@ stateTimer:0,
 strafeDir:Math.random()>0.5?1:-1,
 weapon:team==='CT'?'m4a4':'ak47',
 isAdvanced:isAdvanced,
-accuracy:isAdvanced?0.6:0.35
+accuracy:isAdvanced?0.25:0.15
 };
 scene.add(g);
 allBots.push(g);
@@ -408,7 +413,6 @@ var shopOpen=false;
 var locked=false;
 var roundActive=false;
 
-// УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ДЛЯ КНОПОК
 function bindButton(id,callback){
 var el=document.getElementById(id);
 el.addEventListener('click',function(e){
@@ -452,7 +456,7 @@ joyZone.addEventListener('touchcancel',endJoy);
 document.addEventListener('touchstart',function(e){
 for(var i=0;i<e.changedTouches.length;i++){
 var t=e.changedTouches[i];
-if(t.clientX>innerWidth/2&&!e.target.closest('#shop-menu')&&!e.target.closest('#menu')&&!e.target.closest('#end-menu')&&!e.target.closest('#round-end')&&!e.target.closest('.action-btn')){
+if(t.clientX>innerWidth/2&&!e.target.closest('#shop-menu')&&!e.target.closest('#menu')&&!e.target.closest('#end-menu')&&!e.target.closest('#round-end')&&!e.target.closest('.action-btn')&&!e.target.closest('#fullscreen-btn')){
 look.active=true;look.touchId=t.identifier;
 look.lastX=t.clientX;look.lastY=t.clientY;
 }
@@ -494,6 +498,7 @@ keys[e.code]=true;
 if(e.code==='KeyR')reload();
 if(e.code==='KeyB')openShop();
 if(e.code==='Escape'&&shopOpen)closeShop();
+if(e.code==='KeyF')toggleFullscreen();
 });
 window.addEventListener('keyup',function(e){keys[e.code]=false;});
 renderer.domElement.addEventListener('click',function(){
@@ -781,7 +786,7 @@ var dist=toTarget.length();
 toTarget.normalize();
 var eyePos=new THREE.Vector3(bot.position.x,1.7,bot.position.z);
 var targetEye=new THREE.Vector3(tp.x,1.7,tp.z);
-var canSee=hasLineOfSight(eyePos,targetEye)&&dist<40;
+var canSee=hasLineOfSight(eyePos,targetEye)&&dist<35;
 if(canSee){
 bot.userData.state='combat';
 bot.userData.stateTimer=0;
@@ -794,23 +799,23 @@ bot.userData.stateTimer=0;
 }
 if(bot.userData.state==='combat'){
 bot.rotation.y=Math.atan2(toTarget.x,toTarget.z);
-if(bot.userData.isAdvanced&&dist<20){
+if(bot.userData.isAdvanced&&dist<15&&Math.random()<0.3){
 var strafe=new THREE.Vector3(-toTarget.z,0,toTarget.x);
-bot.position.x+=strafe.x*bot.userData.strafeDir*bot.userData.speed*0.5*dt;
-bot.position.z+=strafe.z*bot.userData.strafeDir*bot.userData.speed*0.5*dt;
-if(Math.random()<0.02)bot.userData.strafeDir*=-1;
+bot.position.x+=strafe.x*bot.userData.strafeDir*bot.userData.speed*0.3*dt;
+bot.position.z+=strafe.z*bot.userData.strafeDir*bot.userData.speed*0.3*dt;
+if(Math.random()<0.01)bot.userData.strafeDir*=-1;
 collideWalls(bot.position);
-}else if(dist>15){
+}else if(dist>12){
 bot.position.x+=toTarget.x*bot.userData.speed*dt;
 bot.position.z+=toTarget.z*bot.userData.speed*dt;
 collideWalls(bot.position);
 }
-var fireRate=weaponsData[bot.userData.weapon].fireRate*1.5;
-if(now-bot.userData.lastShot>fireRate&&dist<35){
+var fireRate=weaponsData[bot.userData.weapon].fireRate*2.5;
+if(now-bot.userData.lastShot>fireRate&&dist<30){
 bot.userData.lastShot=now;
-var hitChance=bot.userData.accuracy*(1-dist/50);
+var hitChance=bot.userData.accuracy*(1-dist/40);
 if(Math.random()<hitChance){
-var dmg=weaponsData[bot.userData.weapon].damage*0.6;
+var dmg=weaponsData[bot.userData.weapon].damage*0.4;
 if(target===player){
 if(player.alive){
 player.hp-=dmg;
@@ -1008,7 +1013,31 @@ document.getElementById('ct-score').textContent=ctScore;
 document.getElementById('t-score').textContent=tScore;
 }
 
-// ПРИВЯЗКА ВСЕХ КНОПОК ЧЕРЕЗ УНИВЕРСАЛЬНУЮ ФУНКЦИЮ
+function toggleFullscreen(){
+var elem=document.documentElement;
+if(!document.fullscreenElement&&!document.webkitFullscreenElement&&!document.mozFullScreenElement&&!document.msFullscreenElement){
+if(elem.requestFullscreen){
+elem.requestFullscreen();
+}else if(elem.webkitRequestFullscreen){
+elem.webkitRequestFullscreen();
+}else if(elem.mozRequestFullScreen){
+elem.mozRequestFullScreen();
+}else if(elem.msRequestFullscreen){
+elem.msRequestFullscreen();
+}
+}else{
+if(document.exitFullscreen){
+document.exitFullscreen();
+}else if(document.webkitExitFullscreen){
+document.webkitExitFullscreen();
+}else if(document.mozCancelFullScreen){
+document.mozCancelFullScreen();
+}else if(document.msExitFullscreen){
+document.msExitFullscreen();
+}
+}
+}
+
 bindButton('startBtn',startGame);
 bindButton('next-round-btn',function(){
 document.getElementById('round-end').classList.remove('active');
@@ -1020,6 +1049,7 @@ document.getElementById('end-menu').classList.remove('active');
 document.getElementById('menu').classList.add('active');
 });
 bindButton('close-shop',closeShop);
+bindButton('fullscreen-btn',toggleFullscreen);
 
 function startGame(){
 initAudio();
