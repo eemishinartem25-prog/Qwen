@@ -2,14 +2,15 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Mini Strike Pro</title>
 <style>
 *{box-sizing:border-box;touch-action:none;-webkit-user-select:none;user-select:none;margin:0;padding:0}
-body{overflow:hidden;background:#000;font-family:'Courier New',monospace;color:#ffcc00}
-canvas{display:block;width:100vw;height:100vh}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Courier New',monospace;color:#ffcc00}
+canvas{display:block;position:absolute;top:0;left:0;width:100vw;height:100vh}
 #vignette{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,0.7) 100%)}
 #damage-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;background:radial-gradient(ellipse at center,transparent 40%,rgba(255,0,0,0) 100%);transition:background 0.3s}
+#blind-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:6;background:rgba(255,255,255,0);transition:background 0.2s}
 #hud{position:absolute;top:10px;left:10px;right:10px;font-size:14px;text-shadow:1px 1px 0 #000;display:flex;justify-content:space-between;pointer-events:none;z-index:10}
 #hud-left,#hud-right{background:rgba(0,0,0,0.7);padding:8px;border-radius:5px;border:1px solid #ffcc00}
 #hp-bar{width:120px;height:10px;background:#300;border:1px solid #ffcc00;margin-top:3px}
@@ -46,10 +47,11 @@ canvas{display:block;width:100vw;height:100vh}
 .btn-mode{background:linear-gradient(180deg,#5af,#28a);color:#fff;border:none;padding:14px 36px;font-size:18px;font-weight:bold;margin:8px;border-radius:8px;cursor:pointer;min-width:250px}
 .btn-map{background:rgba(255,204,0,0.2);border:2px solid #ffcc00;padding:12px;margin:6px;border-radius:8px;cursor:pointer;min-width:200px;color:#fff}
 .btn-map.selected{background:rgba(0,255,0,0.3);border-color:#0f0}
-.btn-agent{background:rgba(100,100,100,0.3);border:2px solid #888;padding:10px;margin:5px;border-radius:8px;cursor:pointer;min-width:180px;color:#fff;display:flex;align-items:center;gap:10px}
+.btn-agent{background:rgba(100,100,100,0.3);border:2px solid #888;padding:10px;margin:5px;border-radius:8px;cursor:pointer;min-width:220px;color:#fff;display:flex;align-items:center;gap:10px}
 .btn-agent.selected{border-color:#0f0;background:rgba(0,255,0,0.2)}
 .btn-agent.locked{opacity:0.5}
 .agent-preview{width:30px;height:30px;border-radius:50%;border:2px solid #fff}
+.agent-bonus{font-size:10px;color:#0f0;margin-top:2px}
 #shop-menu{justify-content:flex-start;padding-top:20px;padding-bottom:80px}
 #shop-menu h2{position:sticky;top:0;background:rgba(0,0,0,0.95);padding:10px;z-index:101;width:100%}
 #shop-items{width:100%;max-width:500px;overflow-y:auto;flex:1;padding-bottom:20px;touch-action:pan-y;-webkit-overflow-scrolling:touch}
@@ -74,6 +76,7 @@ canvas{display:block;width:100vw;height:100vh}
 <body>
 <div id="vignette"></div>
 <div id="damage-overlay"></div>
+<div id="blind-overlay"></div>
 <div id="crosshair"></div>
 <div id="hit-marker">✕</div>
 <div id="round-msg"></div>
@@ -136,8 +139,16 @@ var isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||('ontouchsta
 var gameState='LOBBY',gameMode='bomb',selectedMap='inferno',selectedAgent=0;
 var totalWins=parseInt(localStorage.getItem('ms_wins')||'0');
 var killStreak=0;
+// АГЕНТЫ С ПРЕИМУЩЕСТВАМИ
+var agents=[
+{name:'РЕКРУТ',color:0x4488cc,wins:0,speedBonus:0,hpBonus:0,accuracyBonus:0,desc:'Базовый агент'},
+{name:'SAS',color:0x2244aa,wins:3,speedBonus:0.08,hpBonus:0,accuracyBonus:0.03,desc:'+8% скорость'},
+{name:'GIGN',color:0x555577,wins:7,speedBonus:0,hpBonus:15,accuracyBonus:0.05,desc:'+15 HP, +5% точность'},
+{name:'IDF',color:0x886644,wins:15,speedBonus:0.12,hpBonus:10,accuracyBonus:0,desc:'+12% скорость, +10 HP'},
+{name:'SEAL',color:0x224422,wins:25,speedBonus:0.05,hpBonus:20,accuracyBonus:0.08,desc:'+20 HP, +8% точность'},
+{name:'ЭЛИТА',color:0xddaa00,wins:50,speedBonus:0.15,hpBonus:25,accuracyBonus:0.1,desc:'+25 HP, +15% скорость, +10% точность'}
+];
 var ranks=[{name:'СЕРЕБРО I',wins:0},{name:'СЕРЕБРО II',wins:3},{name:'СЕРЕБРО ЭЛИТА',wins:7},{name:'Золотая Нова',wins:12},{name:'МАГИСТР',wins:20},{name:'ЛЕГЕНДА ОРЛА',wins:30},{name:'ЛЕГ. ВЫСШ.',wins:50},{name:'ГЛОБАЛ ЭЛИТА',wins:100}];
-var agents=[{name:'РЕКРУТ',color:0x4488cc,wins:0},{name:'SAS',color:0x2244aa,wins:3},{name:'GIGN',color:0x555577,wins:7},{name:'IDF',color:0x886644,wins:15},{name:'SEAL',color:0x224422,wins:25},{name:'ЭЛИТА',color:0xddaa00,wins:50}];
 var mapsByMode={bomb:['inferno','dust2','mirage','cache'],dm:['nuke','vertigo','train','overpass']};
 var scene=new THREE.Scene();
 scene.background=new THREE.Color(0xd4a574);
@@ -442,8 +453,8 @@ nova:{name:'NOVA',damage:120,fireRate:900,maxAmmo:8,reserve:24,reloadTime:3500,p
 ak47:{name:'AK-47',damage:45,fireRate:100,maxAmmo:30,reserve:90,reloadTime:2500,price:2700,spread:0.02,type:'rifle'},
 m4a4:{name:'M4A4',damage:38,fireRate:90,maxAmmo:30,reserve:90,reloadTime:2400,price:2900,spread:0.015,type:'rifle'},
 awp:{name:'AWP',damage:200,fireRate:1500,maxAmmo:5,reserve:20,reloadTime:3500,price:4750,spread:0.002,type:'sniper'}};
-var grenadesData={he:{name:'ОСКОЛОЧНАЯ',price:300,damage:80,radius:5},flash:{name:'ФЛЕШКА',price:200,duration:3},smoke:{name:'ДЫМОВАЯ',price:300,duration:15},molotov:{name:'МОЛОТОВ',price:400,damage:40,radius:4,duration:7}};
-var player={pos:new THREE.Vector3(0,1.7,0),vel:new THREE.Vector3(),yaw:0,pitch:0,hp:100,maxHp:100,armor:0,money:800,score:0,kills:0,deaths:0,currentWeapon:'glock',weapons:{glock:{name:'GLOCK-18',damage:22,fireRate:150,ammo:20,maxAmmo:20,reserve:60,reloadTime:1800,spread:0.02,type:'pistol'}},grenades:{he:0,flash:0,smoke:0,molotov:0},currentGrenade:'he',reloading:false,onGround:true,alive:true,team:'CT',name:'ТЫ',hasBomb:false,respawnTimer:0};
+var grenadesData={he:{name:'ОСКОЛОЧНАЯ',price:300,damage:80,radius:5},flash:{name:'ФЛЕШКА',price:200,duration:3,radius:20},smoke:{name:'ДЫМОВАЯ',price:300,duration:15,radius:8},molotov:{name:'МОЛОТОВ',price:400,damage:40,radius:4,duration:7}};
+var player={pos:new THREE.Vector3(0,1.7,0),vel:new THREE.Vector3(),yaw:0,pitch:0,hp:100,maxHp:100,armor:0,money:800,score:0,kills:0,deaths:0,currentWeapon:'glock',weapons:{glock:{name:'GLOCK-18',damage:22,fireRate:150,ammo:20,maxAmmo:20,reserve:60,reloadTime:1800,spread:0.02,type:'pistol'}},grenades:{he:0,flash:0,smoke:0,molotov:0},currentGrenade:'he',reloading:false,onGround:true,alive:true,team:'CT',name:'ТЫ',hasBomb:false,respawnTimer:0,blindTimer:0};
 var gun;
 function createGunModel(type){
 var g=new THREE.Group();
@@ -479,7 +490,8 @@ var color=team==='CT'?agents[selectedAgent].color:0xcc4444;
 var g=createCharacter(color);
 var spawn=team==='CT'?mapSpawns.ct:mapSpawns.t;
 g.position.set(spawn.x+(Math.random()-0.5)*8,0,spawn.z+(Math.random()-0.5)*8);
-g.userData={hp:100,armor:50,team:team,name:name,alive:true,speed:4.5+Math.random()*1.5,lastShot:0,state:'patrol',target:null,stateTimer:0,strafeDir:Math.random()>0.5?1:-1,weapon:team==='CT'?'m4a4':'ak47',accuracy:0.2,viewDistance:70,route:route,wpIdx:0,stuckT:0,lastPos:g.position.clone(),hasBomb:isBombCarrier||false,vel:new THREE.Vector3(),onGround:true,respawnTimer:0};
+var agentBonus=team==='CT'?agents[selectedAgent]:{speedBonus:0.05,hpBonus:0,accuracyBonus:0.02};
+g.userData={hp:100+agentBonus.hpBonus,maxHp:100+agentBonus.hpBonus,armor:50,team:team,name:name,alive:true,speed:(4.5+Math.random()*1.5)*(1+agentBonus.speedBonus),lastShot:0,state:'patrol',target:null,stateTimer:0,strafeDir:Math.random()>0.5?1:-1,weapon:team==='CT'?'m4a4':'ak47',accuracy:(team==='T'?0.2:0.18)+agentBonus.accuracyBonus,viewDistance:70,route:route,wpIdx:0,stuckT:0,lastPos:g.position.clone(),hasBomb:isBombCarrier||false,vel:new THREE.Vector3(),onGround:true,respawnTimer:0,blindTimer:0,panicDir:new THREE.Vector3((Math.random()-0.5)*2,0,(Math.random()-0.5)*2).normalize(),panicTimer:0};
 scene.add(g);allBots.push(g);return g;}
 var bomb={planted:false,position:new THREE.Vector3(),timer:40,defusing:false,defuseProgress:0,mesh:null};
 function createBombMesh(){
@@ -497,6 +509,7 @@ if(type==='shot'){o.type='square';o.frequency.setValueAtTime(180,audioCtx.curren
 else if(type==='hit'){o.type='sawtooth';o.frequency.setValueAtTime(600,audioCtx.currentTime);o.frequency.exponentialRampToValueAtTime(150,audioCtx.currentTime+0.1);g.gain.setValueAtTime(0.1,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.1);}
 else if(type==='step'){o.type='sine';o.frequency.setValueAtTime(100,audioCtx.currentTime);g.gain.setValueAtTime(0.05,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.05);}
 else if(type==='explode'){o.type='sawtooth';o.frequency.setValueAtTime(100,audioCtx.currentTime);o.frequency.exponentialRampToValueAtTime(20,audioCtx.currentTime+0.5);g.gain.setValueAtTime(0.3,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.5);}
+else if(type==='flash'){o.type='sine';o.frequency.setValueAtTime(2000,audioCtx.currentTime);o.frequency.exponentialRampToValueAtTime(500,audioCtx.currentTime+0.3);g.gain.setValueAtTime(0.2,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.3);}
 else{o.type='sine';o.frequency.setValueAtTime(800,audioCtx.currentTime);o.frequency.setValueAtTime(1000,audioCtx.currentTime+0.1);g.gain.setValueAtTime(0.15,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.2);}
 o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+0.5);}
 var joystick={active:false,dx:0,dy:0,ox:0,oy:0,tid:null};
@@ -539,7 +552,7 @@ var mapList=document.getElementById('map-list');mapList.innerHTML='';
 var maps=mapsByMode[gameMode];
 maps.forEach(function(m){var btn=document.createElement('button');btn.className='btn-map'+(m===selectedMap?' selected':'');btn.textContent=m.toUpperCase();btn.onclick=function(){selectedMap=m;updateLobby();};mapList.appendChild(btn);});
 var agentList=document.getElementById('agent-list');agentList.innerHTML='';
-agents.forEach(function(a,i){var unlocked=totalWins>=a.wins;var btn=document.createElement('button');btn.className='btn-agent'+(i===selectedAgent?' selected':'')+(!unlocked?' locked':'');var colorHex='#'+a.color.toString(16).padStart(6,'0');btn.innerHTML='<div class="agent-preview" style="background:'+colorHex+'"></div><div style="text-align:left"><div>'+a.name+'</div>'+(unlocked?'<div style="font-size:10px;color:#0f0">РАЗБЛОКИРОВАН</div>':'<div class="lock-info">Нужно '+a.wins+' побед</div>')+'</div>';if(unlocked)btn.onclick=function(){selectedAgent=i;updateLobby();};agentList.appendChild(btn);});}
+agents.forEach(function(a,i){var unlocked=totalWins>=a.wins;var btn=document.createElement('button');btn.className='btn-agent'+(i===selectedAgent?' selected':'')+(!unlocked?' locked':'');var colorHex='#'+a.color.toString(16).padStart(6,'0');btn.innerHTML='<div class="agent-preview" style="background:'+colorHex+'"></div><div style="text-align:left"><div>'+a.name+'</div><div class="agent-bonus">'+a.desc+'</div>'+(unlocked?'':'<div class="lock-info">Нужно '+a.wins+' побед</div>')+'</div>';if(unlocked)btn.onclick=function(){selectedAgent=i;updateLobby();};agentList.appendChild(btn);});}
 document.querySelectorAll('.btn-mode').forEach(function(btn){btn.addEventListener('click',function(){gameMode=btn.getAttribute('data-mode');selectedMap=mapsByMode[gameMode][0];updateLobby();});});
 bind('play-btn',startMatch);
 function openShop(){
@@ -569,7 +582,6 @@ lastShot=now;wp.ammo--;snd('shot');
 gun.position.z=-0.3;muzzle.intensity=4;
 setTimeout(function(){muzzle.intensity=0;gun.position.z=-0.4;},60);
 var shellPos=camera.position.clone();
-var shellDir=new THREE.Vector3(Math.cos(player.yaw),0,-Math.sin(player.yaw));
 ejectShell(shellPos);
 var flashPos=camera.position.clone();
 var fwd=new THREE.Vector3(-Math.sin(player.yaw)*Math.cos(player.pitch),Math.sin(player.pitch),-Math.cos(player.yaw)*Math.cos(player.pitch));
@@ -625,8 +637,23 @@ var startPos=camera.position.clone().add(fwd.clone().multiplyScalar(0.5));
 var geo=new THREE.SphereGeometry(0.15,8,8);
 var color=type==='he'?0x445566:type==='flash'?0xcccccc:type==='smoke'?0x888888:0xaa4400;
 var mat=new THREE.MeshStandardMaterial({color:color,metalness:0.5});
-createParticle({geo:geo,mat:mat,pos:startPos,vel:fwd.clone().multiplyScalar(20),life:2,gravity:9.8,onDeath:function(){detonateGrenade(type,this.position.clone());}});
+var grenadeMesh=createParticle({geo:geo,mat:mat,pos:startPos,vel:fwd.clone().multiplyScalar(20),life:2,gravity:9.8});
+var grenadeRef={mesh:grenadeMesh,type:type};
+// Сохраним ссылку для onDeath
+for(var i=particles.length-1;i>=0;i--){
+if(particles[i].mesh===grenadeMesh){
+particles[i].onDeath=function(){detonateGrenade(type,grenadeMesh.position.clone());};
+break;}}
 updHUD();}
+// Проверяем смотрит ли существо на позицию
+function isLookingAt(eyePos,lookYaw,lookPitch,targetPos){
+var dir=new THREE.Vector3().subVectors(targetPos,eyePos);
+var dist=dir.length();
+if(dist<0.1)return true;
+dir.normalize();
+var forward=new THREE.Vector3(-Math.sin(lookYaw)*Math.cos(lookPitch),Math.sin(lookPitch),-Math.cos(lookYaw)*Math.cos(lookPitch));
+var dot=dir.dot(forward);
+return dot>0.5; // ~60 градусов конус}
 function detonateGrenade(type,pos){
 if(type==='he'){
 snd('explode');
@@ -634,8 +661,47 @@ for(var i=0;i<30;i++){var geo=new THREE.SphereGeometry(0.1+Math.random()*0.2,6,6
 var radius=grenadesData.he.radius;
 allBots.forEach(function(b){if(b.userData.alive){var d=b.position.distanceTo(pos);if(d<radius&&b.userData.team!==player.team){var dmg=grenadesData.he.damage*(1-d/radius);b.userData.hp-=dmg;createBlood(b.position.clone().add(new THREE.Vector3(0,1,0)));if(b.userData.hp<=0)killEntity(b,player);}}});
 if(player.alive){var d=player.pos.distanceTo(pos);if(d<radius){player.hp-=grenadesData.he.damage*(1-d/radius)*0.5;showDamageOverlay();if(player.hp<=0){player.hp=0;player.alive=false;onPlayerDeath();}updHUD();}}}
+else if(type==='flash'){
+snd('flash');
+// Визуальная вспышка (без PointLight чтобы не лагало)
+var flashGeo=new THREE.SphereGeometry(2,8,8);
+var flashMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:1});
+var flashMesh=new THREE.Mesh(flashGeo,flashMat);
+flashMesh.position.copy(pos);
+scene.add(flashMesh);
+var flashStart=performance.now();
+var fadeFlash=function(){
+var elapsed=(performance.now()-flashStart)/1000;
+if(elapsed<0.5){flashMat.opacity=1-elapsed*2;requestAnimationFrame(fadeFlash);}
+else scene.remove(flashMesh);};
+fadeFlash();
+// Ослепление игрока - ТОЛЬКО если смотрит на флешку и в радиусе
+var radius=grenadesData.flash.radius;
+var dist=player.pos.distanceTo(pos);
+if(player.alive&&dist<radius){
+var eyePos=player.pos.clone();
+if(isLookingAt(eyePos,player.yaw,player.pitch,pos)){
+// Прямой взгляд - сильное ослепление
+var intensity=1-(dist/radius);
+player.blindTimer=Math.max(player.blindTimer,3*intensity);
+}else{
+// Косой взгляд - слабое
+var intensity=0.3*(1-(dist/radius));
+player.blindTimer=Math.max(player.blindTimer,1.5*intensity);}}
+// Ослепление ботов
+allBots.forEach(function(b){
+if(b.userData.alive){
+var d=b.position.distanceTo(pos);
+if(d<radius){
+var eyePos=new THREE.Vector3(b.position.x,1.7,b.position.z);
+var botYaw=b.rotation.y;
+if(isLookingAt(eyePos,botYaw,0,pos)){
+var intensity=1-(d/radius);
+b.userData.blindTimer=Math.max(b.userData.blindTimer,3*intensity);
+}else{
+var intensity=0.3*(1-(d/radius));
+b.userData.blindTimer=Math.max(b.userData.blindTimer,1.5*intensity);}}}});}
 else if(type==='smoke'){for(var i=0;i<20;i++)setTimeout(function(){createSmoke(pos.clone().add(new THREE.Vector3((Math.random()-0.5)*2,Math.random()*2,(Math.random()-0.5)*2)));},i*50);}
-else if(type==='flash'){var flash=new THREE.PointLight(0xffffff,10,30);flash.position.copy(pos);scene.add(flash);setTimeout(function(){scene.remove(flash);},300);}
 else if(type==='molotov'){snd('explode');for(var i=0;i<40;i++)setTimeout(function(){var geo=new THREE.SphereGeometry(0.2+Math.random()*0.3,6,6);var mat=new THREE.MeshBasicMaterial({color:Math.random()>0.5?0xff4400:0xffaa00,transparent:true,opacity:0.8});createParticle({geo:geo,mat:mat,pos:pos.clone().add(new THREE.Vector3((Math.random()-0.5)*3,0,(Math.random()-0.5)*3)),vel:new THREE.Vector3((Math.random()-0.5)*2,2+Math.random()*3,(Math.random()-0.5)*2),life:2,gravity:-1});},i*100);
 var radius=grenadesData.molotov.radius,ticks=0;
 var interval=setInterval(function(){ticks++;if(ticks>10){clearInterval(interval);return;}allBots.forEach(function(b){if(b.userData.alive&&b.userData.team!==player.team){var d=b.position.distanceTo(pos);if(d<radius){b.userData.hp-=grenadesData.molotov.damage*0.3;if(b.userData.hp<=0)killEntity(b,player);}}});},500);}}
@@ -650,8 +716,31 @@ return cl;}
 function hasLOS(a,b){var d=new THREE.Vector3().subVectors(b,a),l=d.length();d.normalize();raycaster.set(a,d);raycaster.far=l;var h=raycaster.intersectObjects(walls);raycaster.far=1e9;return h.length===0;}
 function updBot(b,dt,now){
 if(!roundActive)return;
-if(!b.userData.alive&&gameMode==='dm'){b.userData.respawnTimer-=dt;if(b.userData.respawnTimer<=0)respawnBot(b);return;}
+// Респавн в DM - ВСЕГДА работает, независимо от roundActive
+if(!b.userData.alive&&gameMode==='dm'){
+b.userData.respawnTimer-=dt;
+if(b.userData.respawnTimer<=0)respawnBot(b);
+return;}
 if(!b.userData.alive)return;
+// Таймер ослепления
+if(b.userData.blindTimer>0){
+b.userData.blindTimer-=dt;
+// Ослеплённый бот паникует - идёт в случайном направлении, не стреляет
+b.userData.panicTimer-=dt;
+if(b.userData.panicTimer<=0){
+b.userData.panicDir.set((Math.random()-0.5)*2,0,(Math.random()-0.5)*2).normalize();
+b.userData.panicTimer=0.5+Math.random()*0.5;}
+b.rotation.y=Math.atan2(b.userData.panicDir.x,b.userData.panicDir.z);
+b.position.x+=b.userData.panicDir.x*b.userData.speed*0.7*dt;
+b.position.z+=b.userData.panicDir.z*b.userData.speed*0.7*dt;
+// Гравитация
+b.userData.vel.y-=18*dt;b.position.y+=b.userData.vel.y*dt;
+var col=collideW(b.position,b.userData.vel,0.4);
+var groundY=col.standY>0?col.standY:0;
+if(b.position.y<=groundY+0.01){b.position.y=groundY;b.userData.vel.y=0;}
+// Защита от выхода
+if(Math.abs(b.position.x)>90||Math.abs(b.position.z)>90){var spawn=b.userData.team==='CT'?mapSpawns.ct:mapSpawns.t;b.position.set(spawn.x,groundY,spawn.z);}
+return;}
 var tgt=findTgt(b);b.userData.target=tgt;
 var tp=tgt?(tgt===player?player.pos:tgt.position):null;
 var dist=tp?b.position.distanceTo(tp):999;
@@ -692,10 +781,16 @@ toWP.normalize();
 b.rotation.y=Math.atan2(toWP.x,toWP.z);
 b.position.x+=toWP.x*b.userData.speed*dt;b.position.z+=toWP.z*b.userData.speed*dt;
 var moved=b.position.distanceTo(b.userData.lastPos);
-if(moved<0.05*dt){b.userData.stuckT+=dt;if(b.userData.stuckT>0.8){b.position.set(wp.x,groundY,wp.z);b.userData.stuckT=0;b.userData.wpIdx=(b.userData.wpIdx+1)%rt.length;}}
+if(moved<0.05*dt){b.userData.stuckT+=dt;if(b.userData.stuckT>0.5){
+// УЛУЧШЕННАЯ ЛОГИКА: не просто телепорт, а попытка обойти
+var perp=new THREE.Vector3(-toWP.z,0,toWP.x);
+if(Math.random()<0.5)perp.negate();
+b.position.x+=perp.x*b.userData.speed*dt*3;
+b.position.z+=perp.z*b.userData.speed*dt*3;
+if(b.userData.stuckT>1.5){b.position.set(wp.x,groundY,wp.z);b.userData.stuckT=0;b.userData.wpIdx=(b.userData.wpIdx+1)%rt.length;}}}
 else b.userData.stuckT=0;
 b.userData.lastPos.copy(b.position);}}}
-function respawnBot(b){var spawn=b.userData.team==='CT'?mapSpawns.ct:mapSpawns.t;b.position.set(spawn.x+(Math.random()-0.5)*8,0,spawn.z+(Math.random()-0.5)*8);b.rotation.set(0,0,0);b.userData.hp=100;b.userData.alive=true;b.userData.vel.set(0,0,0);}
+function respawnBot(b){var spawn=b.userData.team==='CT'?mapSpawns.ct:mapSpawns.t;b.position.set(spawn.x+(Math.random()-0.5)*8,0,spawn.z+(Math.random()-0.5)*8);b.rotation.set(0,0,0);b.userData.hp=b.userData.maxHp;b.userData.alive=true;b.userData.vel.set(0,0,0);b.userData.blindTimer=0;b.userData.state='patrol';}
 function plantBomb(){
 if(gameMode!=='bomb'||!player.alive||!player.hasBomb||bomb.planted)return;
 var onSite=false;
@@ -708,7 +803,7 @@ var pb=document.getElementById('plant-btn');if(pb)pb.style.display='none';
 document.getElementById('bomb-status').style.display='block';
 showRM('💣 БОМБА ЗАЛОЖЕНА!',2000);}
 function defuseBomb(){
-if(gameMode!=='bomb'||!player.alive||!bomb.planted||player.team!=='CT')return;
+if(gameMode==='bomb'||!player.alive||!bomb.planted||player.team!=='CT')return;
 var dist=Math.hypot(player.pos.x-bomb.position.x,player.pos.z-bomb.position.z);
 if(dist>3){showRM('ПОДОЙДИ К БОМБЕ!',1500);return;}
 bomb.defusing=true;showRM('ОБЕЗВРЕЖИВАНИЕ...',1000);}
@@ -724,11 +819,29 @@ allBots.forEach(function(b){if(b.userData.team==='CT'&&b.userData.alive){var d=b
 if(player.alive&&player.team==='CT'){var d=player.pos.distanceTo(bomb.position);if(d<30){player.hp=0;player.alive=false;addKF('БОМБА','ТЫ',false);onPlayerDeath();}}
 endRound('T');}}
 function onPlayerDeath(){
-if(gameMode==='dm'){player.respawnTimer=3;gameState='DEAD';var rt=document.getElementById('respawn-timer');if(rt)rt.style.display='block';}
-else{gameState='SPECTATING';spectateIdx=0;var teammates=allBots.filter(function(b){return b.userData.team===player.team&&b.userData.alive;});if(teammates.length>0){spectateTarget=teammates[0];document.getElementById('spectate-info').style.display='block';document.getElementById('spectate-name').textContent=spectateTarget.userData.name;}else spectateTarget=null;}
+if(gameMode==='dm'){
+player.respawnTimer=3;
+gameState='DEAD';
+var rt=document.getElementById('respawn-timer');
+if(rt){rt.style.display='block';rt.textContent='3';}}
+else{
+gameState='SPECTATING';spectateIdx=0;
+var teammates=allBots.filter(function(b){return b.userData.team===player.team&&b.userData.alive;});
+if(teammates.length>0){spectateTarget=teammates[0];document.getElementById('spectate-info').style.display='block';document.getElementById('spectate-name').textContent=spectateTarget.userData.name;}
+else spectateTarget=null;}
 if(!isMobile&&document.pointerLockElement)document.exitPointerLock();}
 function cycleSpectate(){var teammates=allBots.filter(function(b){return b.userData.team===player.team&&b.userData.alive;});if(teammates.length===0)return;spectateIdx=(spectateIdx+1)%teammates.length;spectateTarget=teammates[spectateIdx];document.getElementById('spectate-name').textContent=spectateTarget.userData.name;}
-function respawnPlayer(){var spawn=mapSpawns[player.team];player.pos.set(spawn.x+(Math.random()-0.5)*8,1.7,spawn.z+(Math.random()-0.5)*8);player.hp=player.maxHp;player.alive=true;player.vel.set(0,0,0);player.onGround=true;player.respawnTimer=0;gameState='PLAYING';var rt=document.getElementById('respawn-timer');if(rt)rt.style.display='none';for(var k in player.weapons)player.weapons[k].ammo=player.weapons[k].maxAmmo;if(!isMobile)renderer.domElement.requestPointerLock();}
+function respawnPlayer(){
+var spawn=mapSpawns[player.team];
+player.pos.set(spawn.x+(Math.random()-0.5)*8,1.7,spawn.z+(Math.random()-0.5)*8);
+player.hp=player.maxHp;player.alive=true;
+player.vel.set(0,0,0);player.onGround=true;
+player.respawnTimer=0;player.blindTimer=0;
+gameState='PLAYING';
+var rt=document.getElementById('respawn-timer');
+if(rt)rt.style.display='none';
+for(var k in player.weapons)player.weapons[k].ammo=player.weapons[k].maxAmmo;
+if(!isMobile)renderer.domElement.requestPointerLock();}
 function updateMinimap(){
 var canvas=document.getElementById('minimap'),ctx=canvas.getContext('2d');
 ctx.clearRect(0,0,160,160);ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(0,0,160,160);
@@ -740,13 +853,14 @@ allBots.forEach(function(b){if(b.userData.alive&&b.userData.team!==player.team){
 ctx.fillStyle='#0f0';ctx.beginPath();ctx.arc(cx,cy,4,0,6.28);ctx.fill();
 ctx.strokeStyle='#0f0';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx-Math.sin(player.yaw)*10,cy-Math.cos(player.yaw)*10);ctx.stroke();}
 var roundNum=1,ctScore=0,tScore=0,roundTime=105,roundTimer=roundTime,gameOver=false,MAX_ROUNDS=10;
+var dmTimer=0; // Отдельный таймер для DM
 function startMatch(){
 initAudio();document.getElementById('lobby').classList.remove('active');
 loadMap(selectedMap);
 roundNum=1;ctScore=0;tScore=0;
 player.score=0;player.kills=0;player.deaths=0;killStreak=0;
 if(gameMode==='dm')player.money=999999;else player.money=800;
-player.maxHp=100;player.armor=0;
+player.maxHp=100+agents[selectedAgent].hpBonus;player.armor=0;
 player.currentWeapon='glock';
 player.weapons={glock:{name:'GLOCK-18',damage:22,fireRate:150,ammo:20,maxAmmo:20,reserve:60,reloadTime:1800,spread:0.02,type:'pistol'}};
 player.grenades={he:0,flash:0,smoke:0,molotov:0};
@@ -754,18 +868,23 @@ swW();startRound();}
 function startRound(){
 var spawn=mapSpawns.ct;
 player.pos.set(spawn.x,1.7,spawn.z);player.yaw=0;player.pitch=0;
+player.maxHp=100+agents[selectedAgent].hpBonus;
 player.hp=player.maxHp;player.alive=true;player.reloading=false;
-player.vel.set(0,0,0);player.onGround=true;player.team='CT';gameState='PLAYING';
+player.vel.set(0,0,0);player.onGround=true;player.team='CT';
+player.blindTimer=0;
+gameState='PLAYING';
 for(var k in player.weapons)player.weapons[k].ammo=player.weapons[k].maxAmmo;
 allBots.forEach(function(b){scene.remove(b);});allBots=[];
 var routes=routesByMap[selectedMap];
 createBot('CT','АЛЕКС',routes.ctToA);createBot('CT','ВИКТОР',routes.ctToB);createBot('CT','МАКС',routes.ctToMid);
-var bombCarrier=createBot('T','ИВАН',routes.tToA,gameMode==='bomb');
+createBot('T','ИВАН',routes.tToA,gameMode==='bomb');
 createBot('T','ДМИТРИЙ',routes.tToB);createBot('T','СЕРГЕЙ',routes.tToMid);createBot('T','АНДРЕЙ',routes.tToA);createBot('T','НИКОЛАЙ',routes.tToB);
 bomb.planted=false;bomb.defusing=false;bomb.defuseProgress=0;bomb.mesh.visible=false;
 document.getElementById('bomb-status').style.display='none';
 if(gameMode==='bomb'){var tBots=allBots.filter(function(b){return b.userData.team==='T';});tBots.forEach(function(b){b.userData.hasBomb=false;});tBots[Math.floor(Math.random()*tBots.length)].userData.hasBomb=true;}
-roundActive=true;roundTimer=gameMode==='dm'?300:roundTime;
+roundActive=true;
+roundTimer=gameMode==='dm'?300:roundTime;
+dmTimer=gameMode==='dm'?180:0; // 3 минуты на DM
 document.getElementById('round-title').textContent=gameMode==='dm'?'DM: '+selectedMap.toUpperCase():'РАУНД '+roundNum;
 prevTime=performance.now();
 showRM(gameMode==='bomb'?'РАУНД '+roundNum:'DEATHMATCH',2000);
@@ -791,14 +910,37 @@ function update(){
 requestAnimationFrame(update);
 if(gameState==='LOBBY'||gameState==='SHOP'){renderer.render(scene,camera);return;}
 var now=performance.now(),dt=Math.min((now-prevTime)/1000,0.1);prevTime=now;
-if(gameState==='DEAD'&&gameMode==='dm'){player.respawnTimer-=dt;var rt=document.getElementById('respawn-timer');if(rt)rt.textContent=Math.ceil(Math.max(0,player.respawnTimer));if(player.respawnTimer<=0)respawnPlayer();}
-if(roundActive){roundTimer-=dt;var mn=Math.floor(roundTimer/60),sc=Math.floor(roundTimer%60);document.getElementById('round-timer').textContent=mn+':'+(sc<10?'0':'')+sc;if(roundTimer<=0){if(gameMode==='bomb')endRound(tScore<ctScore?'CT':'T');else endRound(player.kills>10?'CT':'T');return;}}
+// ОБНОВЛЕНИЕ ТАЙМЕРА РЕСПАВНА В DM
+if(gameState==='DEAD'&&gameMode==='dm'){
+player.respawnTimer-=dt;
+var rt=document.getElementById('respawn-timer');
+if(rt){
+var t=Math.ceil(Math.max(0,player.respawnTimer));
+rt.textContent=t>0?t:'ВОЗРОЖДЕНИЕ...';}
+if(player.respawnTimer<=0)respawnPlayer();}
+// ОБНОВЛЕНИЕ ТАЙМЕРА РАУНДА
+if(roundActive){
+roundTimer-=dt;
+var mn=Math.floor(roundTimer/60),sc=Math.floor(roundTimer%60);
+document.getElementById('round-timer').textContent=mn+':'+(sc<10?'0':'')+sc;
+if(roundTimer<=0){
+if(gameMode==='bomb')endRound(tScore<ctScore?'CT':'T');
+else endRound(player.kills>10?'CT':'T');
+return;}}
 if(gameMode==='bomb')updateBomb(dt);
+// ОБНОВЛЕНИЕ ТАЙМЕРА Ослепления игрока
+if(player.blindTimer>0){
+player.blindTimer-=dt;
+var overlay=document.getElementById('blind-overlay');
+var intensity=Math.min(1,player.blindTimer/2);
+overlay.style.background='rgba(255,255,255,'+intensity+')';
+if(player.blindTimer<=0)overlay.style.background='rgba(255,255,255,0)';}
 updateParticles(dt);
 if(player.alive&&roundActive&&!shopOpen&&gameState==='PLAYING'){
 var mx=0,mz=0;
-if(isMobile){if(joystick.active){var fw=new THREE.Vector3(-Math.sin(player.yaw),0,-Math.cos(player.yaw));var rt=new THREE.Vector3(Math.cos(player.yaw),0,-Math.sin(player.yaw));mx=(-joystick.dy)*fw.x+joystick.dx*rt.x;mz=(-joystick.dy)*fw.z+joystick.dx*rt.z;var l=Math.hypot(mx,mz);if(l>0){mx/=l;mz/=l;}mx*=5*dt;mz*=5*dt;}}
-else{var k=window.getKeys();if(k){var fw=new THREE.Vector3(-Math.sin(player.yaw),0,-Math.cos(player.yaw));var rt=new THREE.Vector3(Math.cos(player.yaw),0,-Math.sin(player.yaw));if(k['KeyW']){mx+=fw.x;mz+=fw.z;}if(k['KeyS']){mx-=fw.x;mz-=fw.z;}if(k['KeyD']){mx+=rt.x;mz+=rt.z;}if(k['KeyA']){mx-=rt.x;mz-=rt.z;}var l=Math.hypot(mx,mz);if(l>0){mx/=l;mz/=l;}mx*=6*dt;mz*=6*dt;}}
+var agentSpeedBonus=1+agents[selectedAgent].speedBonus;
+if(isMobile){if(joystick.active){var fw=new THREE.Vector3(-Math.sin(player.yaw),0,-Math.cos(player.yaw));var rt=new THREE.Vector3(Math.cos(player.yaw),0,-Math.sin(player.yaw));mx=(-joystick.dy)*fw.x+joystick.dx*rt.x;mz=(-joystick.dy)*fw.z+joystick.dx*rt.z;var l=Math.hypot(mx,mz);if(l>0){mx/=l;mz/=l;}mx*=5*dt*agentSpeedBonus;mz*=5*dt*agentSpeedBonus;}}
+else{var k=window.getKeys();if(k){var fw=new THREE.Vector3(-Math.sin(player.yaw),0,-Math.cos(player.yaw));var rt=new THREE.Vector3(Math.cos(player.yaw),0,-Math.sin(player.yaw));if(k['KeyW']){mx+=fw.x;mz+=fw.z;}if(k['KeyS']){mx-=fw.x;mz-=fw.z;}if(k['KeyD']){mx+=rt.x;mz+=rt.z;}if(k['KeyA']){mx-=rt.x;mz-=rt.z;}var l=Math.hypot(mx,mz);if(l>0){mx/=l;mz/=l;}mx*=6*dt*agentSpeedBonus;mz*=6*dt*agentSpeedBonus;}}
 player.pos.x+=mx;player.pos.z+=mz;
 if(Math.hypot(mx,mz)>0.01&&player.onGround){stepTimer+=dt;if(stepTimer>0.4){snd('step');stepTimer=0;}}
 player.vel.y-=18*dt;player.pos.y+=player.vel.y*dt;
@@ -834,12 +976,35 @@ document.getElementById('kills').textContent=player.kills;
 document.getElementById('ct-score').textContent=ctScore;
 document.getElementById('t-score').textContent=tScore;
 document.getElementById('rank-display').innerHTML='<span class="rank-badge">'+getRank().name+'</span>';}
-function toggleFS(){var e=document.documentElement;if(!document.fullscreenElement){if(e.requestFullscreen)e.requestFullscreen();else if(e.webkitRequestFullscreen)e.webkitRequestFullscreen();}else{if(document.exitFullscreen)document.exitFullscreen();else if(document.webkitExitFullscreen)document.webkitExitFullscreen();}}
+function toggleFS(){
+var e=document.documentElement;
+if(!document.fullscreenElement){
+if(e.requestFullscreen)e.requestFullscreen();
+else if(e.webkitRequestFullscreen)e.webkitRequestFullscreen();
+else if(e.mozRequestFullScreen)e.mozRequestFullScreen();
+else if(e.msRequestFullscreen)e.msRequestFullscreen();}
+else{
+if(document.exitFullscreen)document.exitFullscreen();
+else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+else if(document.mozCancelFullScreen)document.mozCancelFullScreen();
+else if(document.msExitFullscreen)document.msExitFullscreen();}}
+// ОБРАБОТКА ПОВОРОТА ЭКРАНА И RESIZE
+function handleResize(){
+var w=window.innerWidth,h=window.innerHeight;
+camera.aspect=w/h;
+camera.updateProjectionMatrix();
+renderer.setSize(w,h);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));}
+window.addEventListener('resize',handleResize);
+window.addEventListener('orientationchange',function(){setTimeout(handleResize,100);});
+// Обработка visibility change (когда сворачиваешь вкладку)
+document.addEventListener('visibilitychange',function(){
+if(document.hidden){firing=false;}});
 bind('next-round-btn',function(){document.getElementById('round-end').classList.remove('active');roundNum++;startRound();});
 bind('restartBtn',function(){document.getElementById('end-menu').classList.remove('active');document.getElementById('lobby').classList.add('active');gameState='LOBBY';gameOver=false;updateLobby();});
 bind('close-shop',closeShop);
 bind('fullscreen-btn',toggleFS);
-updateLobby();loadMap('inferno');renderer.render(scene,camera);update();
+updateLobby();loadMap('inferno');handleResize();renderer.render(scene,camera);update();
 </script>
 </body>
 </html>
