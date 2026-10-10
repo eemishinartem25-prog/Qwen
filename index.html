@@ -564,6 +564,48 @@ bind('restartBtn',function(){document.getElementById('end-menu').classList.remov
 bind('close-shop',closeShop);
 bind('fullscreen-btn',toggleFS);
 updateLobby();loadMap('inferno');handleResize();renderer.render(scene,camera);update();
+  // --- ПРОСТОЙ НОЖ И ОСМОТР (ДЛЯ ОДНОГО ФАЙЛА) ---
+
+// 1. Делаем нож быстрым
+knife.speedBoost = 1.5; 
+
+// 2. Логика осмотра (двойное нажатие)
+var lastKnifeTap = 0;
+var originalUseKnife = useKnife; 
+
+useKnife = function() {
+    var now = performance.now();
+    
+    // Если быстро нажали два раза — крутим нож
+    if (now - lastKnifeTap < 300 && player.currentWeapon === 'knife') {
+        inspectAnimation();
+        lastKnifeTap = 0; 
+        return;
+    }
+    
+    lastKnifeTap = now;
+    originalUseKnife(); 
+};
+
+// 3. Анимация вращения
+function inspectAnimation() {
+    if (!gun) return;
+    var startZ = gun.rotation.z;
+    var steps = 20;
+    var i = 0;
+    
+    var interval = setInterval(function() {
+        i++;
+        gun.rotation.z = startZ + Math.sin(i * 0.5) * 2; 
+        gun.rotation.x = Math.cos(i * 0.5) * 0.5;
+        
+        if (i > steps) {
+            clearInterval(interval);
+            gun.rotation.z = -0.3;
+            gun.rotation.x = 0;
+        }
+    }, 30);
+}
 </script>
 </body>
 </html>
